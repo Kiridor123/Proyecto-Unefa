@@ -8,6 +8,7 @@ try {
     
     $query = "
         SELECT 
+            p.id,
             p.cedula, 
             p.nombres, 
             p.apellidos, 
