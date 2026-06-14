@@ -1,0 +1,37 @@
+version: '3.8'
+
+services:
+  web:
+    build:
+      context: .
+      dockerfile: docker/php/Dockerfile
+    container_name: unefa_web
+    ports:
+      - "8080:80"
+    volumes:
+      - ./src:/var/www/html
+      - ./docker/php/uploads.ini:/usr/local/etc/php/conf.d/uploads.ini
+    environment:
+      - DB_HOST=db
+      - DB_PORT=5432
+      - DB_NAME=unefa_medica
+      - DB_USER=unefa_admin
+      - DB_PASSWORD=unefa_secure_pass
+    depends_on:
+      - db
+
+  db:
+    image: postgres:15-alpine
+    container_name: unefa_db
+    ports:
+      - "5432:5432"
+    environment:
+      - POSTGRES_USER=unefa_admin
+      - POSTGRES_PASSWORD=unefa_secure_pass
+      - POSTGRES_DB=unefa_medica
+    volumes:
+      - ./docker/postgres/init.sql:/docker-entrypoint-initdb.d/init.sql
+      - postgres_data:/var/lib/postgresql/data
+
+volumes:
+  postgres_data:
