@@ -3,7 +3,7 @@ async function buscarMorbilidad() {
     const inicio = document.getElementById('morbilidadInicio').value;
     const fin = document.getElementById('morbilidadFin').value;
     if (!inicio || !fin) {
-        Swal.fire('Campos requeridos', 'Por favor seleccione ambas fechas.', 'warning');
+        showNotification('warning', 'Por favor seleccione ambas fechas.');
         return;
     }
     
@@ -64,7 +64,7 @@ async function buscarMorbilidad() {
                 btnImprimir.disabled = false;
             }
         } else {
-            Swal.fire('Error', json.message, 'error');
+            showNotification('error', json.message);
             tableBody.innerHTML = `
                 <tr>
                     <td colspan="7" class="text-center py-8 text-rose-500">Error: ${escapeHTML(json.message)}</td>
@@ -73,7 +73,7 @@ async function buscarMorbilidad() {
         }
     } catch(e) {
         console.error(e);
-        Swal.fire('Error', 'Hubo un error de conexión con el servidor.', 'error');
+        showNotification('error', 'Hubo un error de conexión con el servidor.');
         tableBody.innerHTML = `
             <tr>
                 <td colspan="7" class="text-center py-8 text-rose-500">Error al conectar con el servidor.</td>

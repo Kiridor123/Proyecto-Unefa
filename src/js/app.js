@@ -5,6 +5,26 @@ let currentTab = 'dashboard';
 let categoryChartInstance = null;
 let historyChartInstance = null;
 
+// Sistema de notificaciones Toast auto-cerrables (SweetAlert2)
+function showNotification(type, message, duration = 3000) {
+    const Toast = Swal.mixin({
+        toast: true,
+        position: 'top-end',
+        showConfirmButton: false,
+        timer: duration,
+        timerProgressBar: true,
+        didOpen: (toast) => {
+            toast.addEventListener('mouseenter', Swal.stopTimer);
+            toast.addEventListener('mouseleave', Swal.resumeTimer);
+        }
+    });
+
+    Toast.fire({
+        icon: type, // 'success', 'error', 'warning', 'info'
+        title: message
+    });
+}
+
 // Escapar HTML para evitar XSS
 function escapeHTML(str) {
     if (!str) return '';
@@ -135,6 +155,12 @@ function openModal(cedula = '', categoriaId = '', nombres = '', apellidos = '') 
     modalContentEl.classList.remove('modal-enter');
     modalContentEl.classList.add('modal-enter-active');
     
+    // Asegurar que el flag solo_paciente inicie en 0
+    const formSoloPaciente = document.getElementById('formSoloPaciente');
+    if (formSoloPaciente) {
+        formSoloPaciente.value = '0';
+    }
+
     // Si viene pre-rellenado (desde el drawer o botón de fila)
     if (cedula) {
         document.getElementById('formCedula').value = cedula;
@@ -148,7 +174,7 @@ function openModal(cedula = '', categoriaId = '', nombres = '', apellidos = '') 
     
     // Colocar por defecto la fecha de hoy en fecha de circunstancia
     const today = new Date().toISOString().split('T')[0];
-    const fechaCircunstanciaEl = modalEl.querySelector('input[name="fecha_circunstancia"]');
+    const fechaCircunstanciaEl = document.getElementById('formFechaCircunstancia');
     if (fechaCircunstanciaEl) {
         fechaCircunstanciaEl.value = today;
     }
@@ -172,7 +198,13 @@ function closeModal() {
         modalEl.classList.add('hidden');
         modalContentEl.classList.remove('modal-leave-active');
         modalContentEl.classList.add('modal-enter');
-        document.getElementById('registroForm').reset();
+        
+        const form = document.getElementById('registroForm');
+        if (form) {
+            form.removeAttribute('novalidate');
+            form.reset();
+        }
+        
         document.getElementById('fileError').classList.add('hidden');
         document.getElementById('fileName').classList.add('hidden');
     }, 200);

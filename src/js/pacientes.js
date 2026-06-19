@@ -296,17 +296,59 @@ async function viewPatientDetails(id) {
     }
 }
 
-// Envío de Formulario Registro Consulta
+// Actualizar únicamente los datos del paciente (sin consulta)
+async function guardarSoloPaciente() {
+    const form = document.getElementById('registroForm');
+    if (!form) return;
+
+    // Validar campos obligatorios del paciente manualmente
+    const requiredPatientFields = [
+        { id: 'formCedula', name: 'Cédula de Identidad' },
+        { id: 'formCategoria', name: 'Categoría Institucional' },
+        { id: 'formSexo', name: 'Sexo' },
+        { id: 'formNombres', name: 'Nombres' },
+        { id: 'formApellidos', name: 'Apellidos' }
+    ];
+
+    for (const field of requiredPatientFields) {
+        const el = document.getElementById(field.id);
+        if (!el || !el.value.trim()) {
+            showNotification('warning', `El campo "${field.name}" es obligatorio.`);
+            toggleAccordion('acc-paciente');
+            if (el) el.focus();
+            return;
+        }
+    }
+
+    // Set solo_paciente flag
+    const formSoloPaciente = document.getElementById('formSoloPaciente');
+    if (formSoloPaciente) {
+        formSoloPaciente.value = '1';
+    }
+
+    // Temporalmente habilitar novalidate para evitar validación de campos obligatorios clínicos
+    form.setAttribute('novalidate', '');
+
+    // Disparar envío
+    form.requestSubmit();
+}
+
+// Envío de Formulario Registro Consulta / Paciente
 const registroForm = document.getElementById('registroForm');
 if (registroForm) {
     registroForm.addEventListener('submit', async function(e) {
         e.preventDefault();
-        const btn = document.getElementById('btnGuardar');
-        if (!btn) return;
         
-        const originalText = btn.innerHTML;
-        btn.innerHTML = '<i class="ph ph-spinner animate-spin"></i> Guardando...';
-        btn.disabled = true;
+        const isSoloPaciente = document.getElementById('formSoloPaciente').value === '1';
+        const btnId = isSoloPaciente ? 'btnGuardarSoloPaciente' : 'btnGuardar';
+        const btn = document.getElementById(btnId);
+        
+        let originalText = '';
+        if (btn) {
+            originalText = btn.innerHTML;
+            btn.innerHTML = '<i class="ph ph-spinner animate-spin"></i> Guardando...';
+            btn.disabled = true;
+        }
 
         const formData = new FormData(this);
 
@@ -318,29 +360,26 @@ if (registroForm) {
             let json = await res.json();
             
             if (json.success) {
-                Swal.fire({
-                    icon: 'success',
-                    title: '¡Registrado!',
-                    text: json.message,
-                    confirmButtonColor: '#3b82f6'
-                });
+                showNotification('success', json.message);
                 closeModal();
                 // Recargar tablas y stats
                 loadStats();
                 loadPacientes();
             } else {
-                Swal.fire({
-                    icon: 'error',
-                    title: 'Error de validación',
-                    text: json.message,
-                    confirmButtonColor: '#3b82f6'
-                });
+                showNotification('error', json.message);
             }
         } catch (error) {
-            Swal.fire('Error', 'Hubo un error de conexión con el servidor', 'error');
+            showNotification('error', 'Hubo un error de conexión con el servidor.');
         } finally {
-            btn.innerHTML = originalText;
-            btn.disabled = false;
+            if (btn) {
+                btn.innerHTML = originalText;
+                btn.disabled = false;
+            }
+            this.removeAttribute('novalidate');
+            const formSoloPaciente = document.getElementById('formSoloPaciente');
+            if (formSoloPaciente) {
+                formSoloPaciente.value = '0';
+            }
         }
     });
 }

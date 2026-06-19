@@ -117,19 +117,13 @@ async function cambiarEstadoCita(citaId, nuevoEstado) {
             let json = await res.json();
             
             if (json.success) {
-                Swal.fire({
-                    icon: 'success',
-                    title: '¡Actualizado!',
-                    text: json.message,
-                    timer: 2000,
-                    showConfirmButton: false
-                });
+                showNotification('success', json.message);
                 loadCitas();
             } else {
-                Swal.fire('Error', json.message, 'error');
+                showNotification('error', json.message);
             }
         } catch(e) {
-            Swal.fire('Error', 'No se pudo actualizar la cita.', 'error');
+            showNotification('error', 'No se pudo actualizar la cita.');
         }
     }
 }
@@ -188,26 +182,16 @@ if (citaForm) {
             let json = await res.json();
             
             if (json.success) {
-                Swal.fire({
-                    icon: 'success',
-                    title: '¡Cita Agendada!',
-                    text: json.message,
-                    confirmButtonColor: '#3b82f6'
-                });
+                showNotification('success', json.message);
                 closeCitaModal();
                 // Recargar stats y tabla
                 loadStats();
                 if(currentTab === 'citas') loadCitas();
             } else {
-                Swal.fire({
-                    icon: 'error',
-                    title: 'Error de reserva',
-                    text: json.message,
-                    confirmButtonColor: '#3b82f6'
-                });
+                showNotification('error', json.message);
             }
         } catch (error) {
-            Swal.fire('Error', 'Error al conectarse con el servidor para agendar.', 'error');
+            showNotification('error', 'Error al conectarse con el servidor para agendar.');
         } finally {
             btn.innerHTML = originalText;
             btn.disabled = false;

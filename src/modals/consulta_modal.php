@@ -13,6 +13,8 @@
         
         <div class="p-4 sm:p-5 overflow-y-auto">
             <form id="registroForm" class="space-y-4">
+                <input type="hidden" name="solo_paciente" id="formSoloPaciente" value="0">
+                <input type="hidden" name="fecha_circunstancia" id="formFechaCircunstancia" value="">
                 <div class="space-y-3">
                     
                     <!-- Accordion Item 1: Datos Personales -->
@@ -345,9 +347,12 @@
         </div>
         
         <div class="px-5 py-4 border-t border-slate-100 bg-slate-50 rounded-b-2xl flex justify-end gap-3 shrink-0">
+            <button type="button" onclick="guardarSoloPaciente()" id="btnGuardarSoloPaciente" class="px-4 py-2 text-xs sm:text-sm font-medium text-slate-700 bg-slate-100 hover:bg-slate-200 border border-slate-200 rounded-xl transition shadow-md flex items-center gap-1.5 mr-auto">
+                <i class="ph ph-user-gear"></i> Actualizar sólo Paciente
+            </button>
             <button onclick="closeModal()" class="px-4 py-2 text-xs sm:text-sm font-medium text-slate-600 hover:bg-slate-200 rounded-xl transition">Cancelar</button>
             <button type="submit" form="registroForm" id="btnGuardar" class="px-4 py-2 text-xs sm:text-sm font-medium text-white bg-brand-600 hover:bg-brand-700 rounded-xl transition shadow-md flex items-center gap-1.5">
-                <i class="ph ph-floppy-disk"></i> Guardar
+                <i class="ph ph-floppy-disk"></i> Guardar Consulta
             </button>
         </div>
     </div>

@@ -19,24 +19,38 @@ try {
     $nombres = trim($_POST['nombres'] ?? '');
     $apellidos = trim($_POST['apellidos'] ?? '');
     
+    $solo_paciente = isset($_POST['solo_paciente']) && $_POST['solo_paciente'] == '1';
+    
     $fecha_circunstancia = trim($_POST['fecha_circunstancia'] ?? '');
-    $resumen = trim($_POST['resumen'] ?? '');
+    if (empty($fecha_circunstancia)) {
+        $fecha_circunstancia = date('Y-m-d');
+    }
+    
+    // Fallback: si resumen no está en POST, usar enfermedad_actual
+    $resumen = trim($_POST['resumen'] ?? $_POST['enfermedad_actual'] ?? '');
+    
     $inicio_reposo = !empty($_POST['inicio_reposo']) ? trim($_POST['inicio_reposo']) : null;
     $fin_reposo = !empty($_POST['fin_reposo']) ? trim($_POST['fin_reposo']) : null;
 
-    if (!$cedula || !$nombres || !$apellidos || !$categoria_id || !$fecha_circunstancia || !$resumen) {
-        throw new Exception("Faltan campos obligatorios en el formulario.");
-    }
+    if ($solo_paciente) {
+        if (!$cedula || !$nombres || !$apellidos || !$categoria_id) {
+            throw new Exception("Faltan campos obligatorios del paciente.");
+        }
+    } else {
+        if (!$cedula || !$nombres || !$apellidos || !$categoria_id || !$fecha_circunstancia || !$resumen) {
+            throw new Exception("Faltan campos obligatorios en el formulario.");
+        }
 
-    // Validar formato de fecha circunstancia
-    if (strtotime($fecha_circunstancia) > time()) {
-        throw new Exception("La fecha de la circunstancia no puede ser una fecha futura.");
-    }
+        // Validar formato de fecha circunstancia
+        if (strtotime($fecha_circunstancia) > time()) {
+            throw new Exception("La fecha de la circunstancia no puede ser una fecha futura.");
+        }
 
-    // Validar rango de reposo
-    if ($inicio_reposo && $fin_reposo) {
-        if (strtotime($fin_reposo) < strtotime($inicio_reposo)) {
-            throw new Exception("La fecha de fin de reposo no puede ser anterior a la de inicio.");
+        // Validar rango de reposo
+        if ($inicio_reposo && $fin_reposo) {
+            if (strtotime($fin_reposo) < strtotime($inicio_reposo)) {
+                throw new Exception("La fecha de fin de reposo no puede ser anterior a la de inicio.");
+            }
         }
     }
 
@@ -160,63 +174,68 @@ try {
     }
 
     // 2. Insertar Consulta
-    $stmt = $db->prepare("
-        INSERT INTO consultas (
-            paciente_id, fecha_circunstancia, resumen, fecha_inicio_reposo, fecha_fin_reposo,
-            motivo_consulta, enfermedad_actual, diagnostico, vital_ta, vital_fc, vital_fr, vital_spo2, vital_peso_talla,
-            fisico_piel, fisico_cabeza, fisico_cuello, fisico_torax, fisico_abdomen, fisico_extremidades, fisico_neurologico,
-            laboratorios, plan_tratamiento, pendiente
-        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?) 
-        RETURNING id
-    ");
-    $stmt->execute([
-        $paciente_id, $fecha_circunstancia, $resumen, $inicio_reposo, $fin_reposo,
-        $motivo_consulta, $enfermedad_actual, $diagnostico, $vital_ta, $vital_fc, $vital_fr, $vital_spo2, $vital_peso_talla,
-        $fisico_piel, $fisico_cabeza, $fisico_cuello, $fisico_torax, $fisico_abdomen, $fisico_extremidades, $fisico_neurologico,
-        $laboratorios, $plan_tratamiento, $pendiente
-    ]);
-    $consulta_id = $stmt->fetchColumn();
+    if (!$solo_paciente) {
+        $stmt = $db->prepare("
+            INSERT INTO consultas (
+                paciente_id, fecha_circunstancia, resumen, fecha_inicio_reposo, fecha_fin_reposo,
+                motivo_consulta, enfermedad_actual, diagnostico, vital_ta, vital_fc, vital_fr, vital_spo2, vital_peso_talla,
+                fisico_piel, fisico_cabeza, fisico_cuello, fisico_torax, fisico_abdomen, fisico_extremidades, fisico_neurologico,
+                laboratorios, plan_tratamiento, pendiente
+            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?) 
+            RETURNING id
+        ");
+        $stmt->execute([
+            $paciente_id, $fecha_circunstancia, $resumen, $inicio_reposo, $fin_reposo,
+            $motivo_consulta, $enfermedad_actual, $diagnostico, $vital_ta, $vital_fc, $vital_fr, $vital_spo2, $vital_peso_talla,
+            $fisico_piel, $fisico_cabeza, $fisico_cuello, $fisico_torax, $fisico_abdomen, $fisico_extremidades, $fisico_neurologico,
+            $laboratorios, $plan_tratamiento, $pendiente
+        ]);
+        $consulta_id = $stmt->fetchColumn();
 
-    // 3. Manejar Archivo Adjunto (si existe)
-    if (isset($_FILES['archivo']) && $_FILES['archivo']['error'] === UPLOAD_ERR_OK) {
-        $file = $_FILES['archivo'];
-        
-        if ($file['size'] > 10 * 1024 * 1024) {
-            throw new Exception("El archivo supera el tamaño máximo de 10MB.");
+        // 3. Manejar Archivo Adjunto (si existe)
+        if (isset($_FILES['archivo']) && $_FILES['archivo']['error'] === UPLOAD_ERR_OK) {
+            $file = $_FILES['archivo'];
+            
+            if ($file['size'] > 10 * 1024 * 1024) {
+                throw new Exception("El archivo supera el tamaño máximo de 10MB.");
+            }
+
+            $finfo = finfo_open(FILEINFO_MIME_TYPE);
+            $mime = finfo_file($finfo, $file['tmp_name']);
+            finfo_close($finfo);
+
+            $allowed_mimes = ['image/jpeg', 'image/png', 'application/pdf'];
+            if (!in_array($mime, $allowed_mimes)) {
+                throw new Exception("El formato del archivo es inválido o el archivo está corrupto. Solo JPG, PNG, PDF.");
+            }
+
+            $upload_dir = '../uploads/';
+            if (!is_dir($upload_dir)) {
+                mkdir($upload_dir, 0755, true);
+            }
+
+            $ext = pathinfo($file['name'], PATHINFO_EXTENSION);
+            $new_filename = uniqid() . '_' . bin2hex(random_bytes(4)) . '.' . strtolower($ext);
+            $destination = $upload_dir . $new_filename;
+
+            if (move_uploaded_file($file['tmp_name'], $destination)) {
+                $stmt = $db->prepare("INSERT INTO archivos_adjuntos (consulta_id, ruta_archivo, tipo_archivo) VALUES (?, ?, ?)");
+                $stmt->execute([$consulta_id, 'uploads/' . $new_filename, $mime]);
+            } else {
+                throw new Exception("Falló la transferencia del archivo seguro al servidor.");
+            }
         }
 
-        $finfo = finfo_open(FILEINFO_MIME_TYPE);
-        $mime = finfo_file($finfo, $file['tmp_name']);
-        finfo_close($finfo);
+        // 4. Completar automáticamente citas pendientes para este paciente
+        $stmtCita = $db->prepare("UPDATE citas SET estado = 'Completada' WHERE paciente_id = ? AND estado = 'Pendiente'");
+        $stmtCita->execute([$paciente_id]);
 
-        $allowed_mimes = ['image/jpeg', 'image/png', 'application/pdf'];
-        if (!in_array($mime, $allowed_mimes)) {
-            throw new Exception("El formato del archivo es inválido o el archivo está corrupto. Solo JPG, PNG, PDF.");
-        }
-
-        $upload_dir = '../uploads/';
-        if (!is_dir($upload_dir)) {
-            mkdir($upload_dir, 0755, true);
-        }
-
-        $ext = pathinfo($file['name'], PATHINFO_EXTENSION);
-        $new_filename = uniqid() . '_' . bin2hex(random_bytes(4)) . '.' . strtolower($ext);
-        $destination = $upload_dir . $new_filename;
-
-        if (move_uploaded_file($file['tmp_name'], $destination)) {
-            $stmt = $db->prepare("INSERT INTO archivos_adjuntos (consulta_id, ruta_archivo, tipo_archivo) VALUES (?, ?, ?)");
-            $stmt->execute([$consulta_id, 'uploads/' . $new_filename, $mime]);
-        } else {
-            throw new Exception("Falló la transferencia del archivo seguro al servidor.");
-        }
+        $db->commit();
+        echo json_encode(['success' => true, 'message' => 'El paciente y la consulta se registraron correctamente.']);
+    } else {
+        $db->commit();
+        echo json_encode(['success' => true, 'message' => 'Los datos del paciente se han actualizado correctamente.']);
     }
-
-    // 4. Completar automáticamente citas pendientes para este paciente
-    $stmtCita = $db->prepare("UPDATE citas SET estado = 'Completada' WHERE paciente_id = ? AND estado = 'Pendiente'");
-    $stmtCita->execute([$paciente_id]);
-
-    $db->commit();
-    echo json_encode(['success' => true, 'message' => 'El paciente y la consulta se registraron correctamente.']);
 
 } catch (Exception $e) {
     if (isset($db) && $db->inTransaction()) {
