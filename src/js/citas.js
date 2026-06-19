@@ -1,7 +1,11 @@
 // LÓGICA DE CITAS (TAB 3)
 async function loadCitas() {
     const loader = document.getElementById('citasTableLoader');
-    if (loader) loader.classList.remove('hidden');
+    const tableWrap = document.getElementById('citasTableWrap');
+    const cardsWrap = document.getElementById('citasTableBodyCards');
+    if (loader) loader.style.display = 'flex';
+    if (tableWrap) tableWrap.style.display = 'none';
+    if (cardsWrap) cardsWrap.style.display = 'none';
     try {
         const estadoEl = document.getElementById('filterCitasEstado');
         const estado = estadoEl ? estadoEl.value : 'Pendiente';
@@ -14,7 +18,9 @@ async function loadCitas() {
     } catch(e) {
         console.error('Error citas:', e);
     } finally {
-        if (loader) loader.classList.add('hidden');
+        if (loader) loader.style.display = 'none';
+        if (tableWrap) tableWrap.style.display = '';
+        if (cardsWrap) cardsWrap.style.display = '';
     }
 }
 
@@ -30,6 +36,9 @@ function renderCitasTable() {
     tbody.innerHTML = '';
     let visibleCount = 0;
 
+    const cardsContainer = document.getElementById('citasTableBodyCards');
+    if (cardsContainer) cardsContainer.innerHTML = '';
+
     citasList.forEach(c => {
         const pacienteNombre = `${c.nombres} ${c.apellidos}`.toLowerCase();
         const cedulaMatch = c.cedula.toLowerCase().includes(query);
@@ -37,57 +46,123 @@ function renderCitasTable() {
 
         if (cedulaMatch || nombreMatch) {
             visibleCount++;
-            const row = document.createElement('tr');
-            row.className = 'hover:bg-slate-50/60 transition';
-            
+
             let statusBadge = '';
             let actionButtons = '';
-            
+            let statusColor = '';
+
             if (c.estado === 'Pendiente') {
                 statusBadge = '<span class="px-2.5 py-1 rounded-full text-xs font-semibold bg-amber-50 text-amber-600 border border-amber-200">Pendiente</span>';
+                statusColor = 'text-amber-600';
                 actionButtons = `
-                    <button onclick="cambiarEstadoCita(${c.id}, 'Completada')" class="p-1 hover:bg-emerald-50 text-slate-400 hover:text-emerald-600 rounded-lg transition" title="Marcar como Completada">
-                        <i class="ph ph-check-circle text-lg sm:text-xl"></i>
+                    <button onclick="cambiarEstadoCita(${c.id}, 'Completada')" class="p-1.5 hover:bg-emerald-50 text-slate-400 hover:text-emerald-600 rounded-lg transition" title="Marcar como Completada">
+                        <i class="ph ph-check-circle text-xl"></i>
                     </button>
-                    <button onclick="cambiarEstadoCita(${c.id}, 'Cancelada')" class="p-1 hover:bg-rose-50 text-slate-400 hover:text-rose-600 rounded-lg transition" title="Cancelar Cita">
-                        <i class="ph ph-x-circle text-lg sm:text-xl"></i>
+                    <button onclick="cambiarEstadoCita(${c.id}, 'Cancelada')" class="p-1.5 hover:bg-rose-50 text-slate-400 hover:text-rose-600 rounded-lg transition" title="Cancelar Cita">
+                        <i class="ph ph-x-circle text-xl"></i>
                     </button>
                 `;
             } else if (c.estado === 'Completada') {
                 statusBadge = '<span class="px-2.5 py-1 rounded-full text-xs font-semibold bg-emerald-50 text-emerald-600 border border-emerald-200">Completada</span>';
+                statusColor = 'text-emerald-600';
             } else {
                 statusBadge = '<span class="px-2.5 py-1 rounded-full text-xs font-semibold bg-rose-50 text-rose-600 border border-rose-200">Cancelada</span>';
+                statusColor = 'text-rose-500';
             }
 
-            // Formateado compacto de fecha para pantallas pequeñas (soporta espacios o 'T' y recorta segundos)
             const parts = c.fecha_cita.split(/[\sT]/);
             const fechaParte = parts[0];
             const horaParte = parts[1] ? parts[1].substring(0, 5) : '';
+            const fullName = `${escapeHTML(c.nombres)} ${escapeHTML(c.apellidos)}`;
 
+            // ── FILA DE TABLA (visible solo en md+) ───────────────────
+            const row = document.createElement('tr');
+            row.className = 'hover:bg-slate-50/60 transition';
             row.innerHTML = `
-                <td class="px-4 sm:px-6 py-4 text-xs sm:text-sm font-medium text-slate-700">
+                <td class="px-6 py-4 text-sm font-medium text-slate-700">
                     <div class="font-semibold">${fechaParte}</div>
-                    <div class="text-[10px] text-slate-400 sm:text-xs">${horaParte}</div>
+                    <div class="text-xs text-slate-400">${horaParte}</div>
                 </td>
-                <td class="px-4 sm:px-6 py-4 hidden sm:table-cell font-semibold text-slate-700 text-xs sm:text-sm">${escapeHTML(c.cedula)}</td>
-                <td class="px-4 sm:px-6 py-4 font-medium text-slate-800 text-xs sm:text-sm">
-                    <div class="truncate max-w-[100px] sm:max-w-none">${escapeHTML(c.nombres)} ${escapeHTML(c.apellidos)}</div>
+                <td class="px-6 py-4 font-semibold text-slate-700 text-sm">${escapeHTML(c.cedula)}</td>
+                <td class="px-6 py-4 font-medium text-slate-800 text-sm">${fullName}</td>
+                <td class="px-6 py-4 hidden lg:table-cell">
+                    <span class="px-2 py-1 rounded-md text-xs font-semibold bg-slate-100 text-slate-600">${escapeHTML(c.categoria)}</span>
                 </td>
-                <td class="px-4 sm:px-6 py-4 hidden lg:table-cell"><span class="px-2.5 py-1 rounded-full text-xs font-semibold bg-slate-100 text-slate-600 border border-slate-200/50">${escapeHTML(c.categoria)}</span></td>
-                <td class="px-4 sm:px-6 py-4">${statusBadge}</td>
-                <td class="px-4 sm:px-6 py-4 text-right">
-                    <div class="flex justify-end gap-1.5 sm:gap-2">
+                <td class="px-6 py-4">${statusBadge}</td>
+                <td class="px-6 py-4 text-right">
+                    <div class="flex justify-end gap-1.5">
                         ${actionButtons}
                     </div>
                 </td>
             `;
             tbody.appendChild(row);
+
+            // ── TARJETA MÓVIL (visible solo en < md) ─────────────────
+            if (cardsContainer) {
+                const card = document.createElement('div');
+                card.className = 'glass-panel p-5 rounded-2xl border border-slate-100 bg-white/85 hover:bg-white transition-all duration-300 flex flex-col justify-between shadow-sm hover:shadow-md gap-4 relative';
+                
+                // Formato amigable de fecha para el badge
+                const meses = ['Ene', 'Feb', 'Mar', 'Abr', 'May', 'Jun', 'Jul', 'Ago', 'Sep', 'Oct', 'Nov', 'Dic'];
+                const mesNum = parseInt(fechaParte.split('-')[1]) - 1;
+                const mesTexto = meses[mesNum] || '';
+                const diaTexto = fechaParte.split('-')[2] || '';
+
+                card.innerHTML = `
+                    <div class="flex items-start justify-between gap-3">
+                        <div class="flex items-center gap-3 min-w-0">
+                            <div class="w-11 h-11 rounded-xl bg-amber-50 text-amber-600 flex flex-col items-center justify-center shrink-0 border border-amber-100 shadow-sm leading-none">
+                                <span class="text-xs font-bold">${diaTexto}</span>
+                                <span class="text-[9px] font-semibold uppercase text-amber-500 mt-0.5">${mesTexto}</span>
+                            </div>
+                            <div class="min-w-0">
+                                <h4 class="font-bold text-slate-800 text-sm sm:text-base truncate leading-tight">${fullName}</h4>
+                                <p class="text-xs text-slate-500 font-semibold mt-1 flex items-center gap-1">
+                                    <i class="ph ph-identification-card text-slate-400 text-sm"></i> ${escapeHTML(c.cedula)}
+                                </p>
+                            </div>
+                        </div>
+                        <div class="shrink-0">${statusBadge}</div>
+                    </div>
+                    
+                    <div class="border-t border-slate-100/70 pt-3 flex flex-wrap gap-4 text-[11px] text-slate-500">
+                        <div class="flex items-center gap-1.5">
+                            <i class="ph ph-clock text-xs text-slate-400"></i>
+                            <span>Hora de cita:</span>
+                            <span class="font-semibold text-slate-700">${horaParte}</span>
+                        </div>
+                        <div class="flex items-center gap-1.5">
+                            <i class="ph ph-tag text-xs text-slate-400"></i>
+                            <span>Categoría:</span>
+                            <span class="font-semibold text-slate-700">${escapeHTML(c.categoria)}</span>
+                        </div>
+                    </div>
+                    
+                    ${actionButtons ? `
+                    <div class="grid grid-cols-2 gap-2 mt-1 pt-1" onclick="event.stopPropagation()">
+                        <button onclick="cambiarEstadoCita(${c.id}, 'Completada')" class="flex items-center justify-center gap-1.5 py-2.5 px-3 bg-emerald-50 hover:bg-emerald-100 text-emerald-600 text-xs font-bold rounded-xl border border-emerald-100 transition shadow-sm min-h-[44px]">
+                            <i class="ph ph-check-circle text-base"></i> Completar
+                        </button>
+                        <button onclick="cambiarEstadoCita(${c.id}, 'Cancelada')" class="flex items-center justify-center gap-1.5 py-2.5 px-3 bg-rose-50 hover:bg-rose-100 text-rose-600 text-xs font-bold rounded-xl border border-rose-100 transition shadow-sm min-h-[44px]">
+                            <i class="ph ph-x-circle text-base"></i> Cancelar
+                        </button>
+                    </div>
+                    ` : ''}
+                `;
+                cardsContainer.appendChild(card);
+            }
         }
     });
 
+
     if (emptyState) {
-        if (visibleCount === 0) emptyState.classList.remove('hidden');
-        else emptyState.classList.add('hidden');
+        if (visibleCount === 0) {
+            emptyState.classList.remove('hidden');
+            emptyState.style.display = 'flex';
+        } else {
+            emptyState.classList.add('hidden');
+            emptyState.style.display = 'none';
+        }
     }
 }
 
@@ -188,9 +263,21 @@ if (citaForm) {
                 loadStats();
                 if(currentTab === 'citas') loadCitas();
             } else {
-                showNotification('error', json.message);
+                if (json.errors && Object.keys(json.errors).length > 0) {
+                    if (typeof handleInlineErrors === 'function') {
+                        handleInlineErrors(json.errors, 'citaForm');
+                    }
+                    if (typeof showValidationErrors === 'function') {
+                        showValidationErrors(json.errors);
+                    } else {
+                        showNotification('error', json.message);
+                    }
+                } else {
+                    showNotification('error', json.message);
+                }
             }
         } catch (error) {
+            console.error(error);
             showNotification('error', 'Error al conectarse con el servidor para agendar.');
         } finally {
             btn.innerHTML = originalText;

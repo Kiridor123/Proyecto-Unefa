@@ -1,7 +1,11 @@
 // Carga de Pacientes (API -> Cache global)
 async function loadPacientes() {
     const tableLoader = document.getElementById('tableLoader');
-    if (tableLoader) tableLoader.classList.remove('hidden');
+    const tableWrap = document.getElementById('pacientesTableWrap');
+    const cardsWrap = document.getElementById('tableBodyCards');
+    if (tableLoader) tableLoader.style.display = 'flex';
+    if (tableWrap) tableWrap.style.display = 'none';
+    if (cardsWrap) cardsWrap.style.display = 'none';
     try {
         let res = await fetch('api/get_pacientes.php');
         let json = await res.json();
@@ -12,7 +16,9 @@ async function loadPacientes() {
     } catch(e) { 
         console.error('Error pacientes:', e); 
     } finally {
-        if (tableLoader) tableLoader.classList.add('hidden');
+        if (tableLoader) tableLoader.style.display = 'none';
+        if (tableWrap) tableWrap.style.display = '';
+        if (cardsWrap) cardsWrap.style.display = '';
     }
 }
 
@@ -32,50 +38,100 @@ function renderTable() {
     tbody.innerHTML = '';
     let visibleCount = 0;
 
+    const cardsContainer = document.getElementById('tableBodyCards');
+    if (cardsContainer) cardsContainer.innerHTML = '';
+
     pacientesList.forEach(p => {
         const cedulaMatch = p.cedula.toLowerCase().includes(qCedula);
         const catMatch = !isFilterCatActive || p.categoria.toLowerCase() === qCat;
 
         if (cedulaMatch && catMatch) {
             visibleCount++;
+            const initials = `${escapeHTML(p.nombres.charAt(0))}${escapeHTML(p.apellidos.charAt(0))}`;
+            const fullName = `${escapeHTML(p.nombres)} ${escapeHTML(p.apellidos)}`;
+            const lastConsult = p.ultima_consulta
+                ? p.ultima_consulta.split(' ')[0]
+                : '<span class="text-slate-400 italic">Sin consultas</span>';
+
+            // ── FILA DE TABLA (visible solo en md+) ───────────────────
             const row = document.createElement('tr');
             row.className = 'hover:bg-slate-50/60 cursor-pointer transition';
-            
-            // Al hacer clic en la fila, se abre el drawer con el historial clínico
             row.onclick = () => viewPatientDetails(p.id);
-
             row.innerHTML = `
-                <td class="px-4 sm:px-6 py-4 font-semibold text-slate-700 text-xs sm:text-sm">${escapeHTML(p.cedula)}</td>
-                <td class="px-4 sm:px-6 py-4">
+                <td class="px-6 py-4 font-semibold text-slate-700 text-sm">${escapeHTML(p.cedula)}</td>
+                <td class="px-6 py-4">
                     <div class="flex items-center gap-3">
-                        <div class="w-8 h-8 rounded-full bg-brand-50 text-brand-600 flex items-center justify-center font-bold text-xs shrink-0">
-                            ${escapeHTML(p.nombres.charAt(0))}${escapeHTML(p.apellidos.charAt(0))}
-                        </div>
-                        <span class="font-medium text-slate-800 text-xs sm:text-sm truncate max-w-[120px] sm:max-w-none">${escapeHTML(p.nombres)} ${escapeHTML(p.apellidos)}</span>
+                        <div class="w-8 h-8 rounded-full bg-brand-50 text-brand-600 flex items-center justify-center font-bold text-xs shrink-0">${initials}</div>
+                        <span class="font-medium text-slate-800 text-sm">${fullName}</span>
                     </div>
                 </td>
-                <td class="px-4 sm:px-6 py-4 hidden md:table-cell">
+                <td class="px-6 py-4">
                     <span class="px-2.5 py-1 rounded-full text-xs font-semibold bg-slate-100 text-slate-600 border border-slate-200/50">${escapeHTML(p.categoria)}</span>
                 </td>
-                <td class="px-4 sm:px-6 py-4 hidden sm:table-cell text-slate-500 text-xs sm:text-sm">${p.ultima_consulta ? p.ultima_consulta.split(' ')[0] : '<span class="text-slate-400 italic">Sin consultas</span>'}</td>
-                <td class="px-4 sm:px-6 py-4 text-right" onclick="event.stopPropagation()">
-                    <div class="flex justify-end gap-1.5 sm:gap-2">
+                <td class="px-6 py-4 text-slate-500 text-sm">${lastConsult}</td>
+                <td class="px-6 py-4 text-right" onclick="event.stopPropagation()">
+                    <div class="flex justify-end gap-2">
                         <button onclick="openModal('${escapeHTML(p.cedula)}', ${p.categoria_id}, '${escapeHTML(p.nombres)}', '${escapeHTML(p.apellidos)}')" class="p-1.5 hover:bg-brand-50 text-slate-400 hover:text-brand-600 rounded-lg transition" title="Registrar Consulta">
-                            <i class="ph ph-stethoscope text-base sm:text-lg"></i>
+                            <i class="ph ph-stethoscope text-lg"></i>
                         </button>
                         <button onclick="openCitaModal(${p.id}, '${escapeHTML(p.cedula)}', '${escapeHTML(p.nombres)} ${escapeHTML(p.apellidos)}')" class="p-1.5 hover:bg-amber-50 text-slate-400 hover:text-amber-500 rounded-lg transition" title="Programar Cita">
-                            <i class="ph ph-calendar-plus text-base sm:text-lg"></i>
+                            <i class="ph ph-calendar-plus text-lg"></i>
                         </button>
                     </div>
                 </td>
             `;
             tbody.appendChild(row);
+
+            // ── TARJETA MÓVIL (visible solo en < md) ─────────────────
+            if (cardsContainer) {
+                const card = document.createElement('div');
+                card.className = 'glass-panel p-5 rounded-2xl border border-slate-100 bg-white/85 hover:bg-white transition-all duration-300 flex flex-col justify-between shadow-sm hover:shadow-md gap-4 relative';
+                card.onclick = () => viewPatientDetails(p.id);
+                card.innerHTML = `
+                    <div class="flex items-start justify-between gap-3">
+                        <div class="flex items-center gap-3 min-w-0">
+                            <div class="w-11 h-11 rounded-full bg-brand-50 text-brand-600 flex items-center justify-center font-bold text-sm shrink-0 border border-brand-100 shadow-sm">${initials}</div>
+                            <div class="min-w-0">
+                                <h4 class="font-bold text-slate-800 text-sm sm:text-base truncate leading-tight">${fullName}</h4>
+                                <p class="text-xs text-slate-500 font-semibold mt-1 flex items-center gap-1">
+                                    <i class="ph ph-identification-card text-brand-500 text-sm"></i> ${escapeHTML(p.cedula)}
+                                </p>
+                            </div>
+                        </div>
+                        <span class="px-2.5 py-1 rounded-full text-[10px] font-bold bg-slate-100 text-slate-600 border border-slate-200/50 shrink-0">${escapeHTML(p.categoria)}</span>
+                    </div>
+                    
+                    <div class="border-t border-slate-100/70 pt-3 flex flex-col gap-1 text-[11px] text-slate-500">
+                        <div class="flex items-center gap-1.5">
+                            <i class="ph ph-calendar text-xs text-slate-400"></i>
+                            <span>Última consulta:</span>
+                            <span class="font-medium text-slate-700">${p.ultima_consulta ? p.ultima_consulta.split(' ')[0] : '<span class="text-slate-400 italic">Sin consultas</span>'}</span>
+                        </div>
+                    </div>
+                    
+                    <div class="grid grid-cols-2 gap-2 mt-1 pt-1" onclick="event.stopPropagation()">
+                        <button onclick="openModal('${escapeHTML(p.cedula)}', ${p.categoria_id}, '${escapeHTML(p.nombres)}', '${escapeHTML(p.apellidos)}')" class="flex items-center justify-center gap-1.5 py-2.5 px-3 bg-brand-50 hover:bg-brand-100 text-brand-600 text-xs font-bold rounded-xl border border-brand-100 transition shadow-sm min-h-[44px]">
+                            <i class="ph ph-stethoscope text-base"></i> Registrar Consulta
+                        </button>
+                        <button onclick="openCitaModal(${p.id}, '${escapeHTML(p.cedula)}', '${escapeHTML(p.nombres)} ${escapeHTML(p.apellidos)}')" class="flex items-center justify-center gap-1.5 py-2.5 px-3 bg-amber-50 hover:bg-amber-100 text-amber-600 text-xs font-bold rounded-xl border border-amber-100 transition shadow-sm min-h-[44px]">
+                            <i class="ph ph-calendar-plus text-base"></i> Agendar Cita
+                        </button>
+                    </div>
+                `;
+                cardsContainer.appendChild(card);
+            }
         }
     });
 
+
     if (emptyState) {
-        if (visibleCount === 0) emptyState.classList.remove('hidden');
-        else emptyState.classList.add('hidden');
+        if (visibleCount === 0) {
+            emptyState.classList.remove('hidden');
+            emptyState.style.display = 'flex';
+        } else {
+            emptyState.classList.add('hidden');
+            emptyState.style.display = 'none';
+        }
     }
 }
 
@@ -366,9 +422,21 @@ if (registroForm) {
                 loadStats();
                 loadPacientes();
             } else {
-                showNotification('error', json.message);
+                if (json.errors && Object.keys(json.errors).length > 0) {
+                    if (typeof handleInlineErrors === 'function') {
+                        handleInlineErrors(json.errors, 'registroForm');
+                    }
+                    if (typeof showValidationErrors === 'function') {
+                        showValidationErrors(json.errors);
+                    } else {
+                        showNotification('error', json.message);
+                    }
+                } else {
+                    showNotification('error', json.message);
+                }
             }
         } catch (error) {
+            console.error(error);
             showNotification('error', 'Hubo un error de conexión con el servidor.');
         } finally {
             if (btn) {

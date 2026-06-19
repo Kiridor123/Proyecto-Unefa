@@ -11,6 +11,11 @@ if (empty($fecha_inicio) || empty($fecha_fin)) {
     exit;
 }
 
+if (strtotime($fecha_inicio) > strtotime($fecha_fin)) {
+    echo json_encode(['success' => false, 'message' => 'La fecha de inicio no puede ser posterior a la fecha de fin.']);
+    exit;
+}
+
 try {
     $db = Config\Database::getInstance()->getConnection();
     

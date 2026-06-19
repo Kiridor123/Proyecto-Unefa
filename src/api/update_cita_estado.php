@@ -22,6 +22,23 @@ try {
     if (!in_array($estado, $estados_permitidos)) {
         throw new Exception("Estado de cita no válido.");
     }
+
+    // Verificar el estado actual
+    $stmtCita = $db->prepare("SELECT estado FROM citas WHERE id = ?");
+    $stmtCita->execute([$cita_id]);
+    $cita = $stmtCita->fetch();
+
+    if (!$cita) {
+        throw new Exception("La cita no existe.");
+    }
+
+    $estado_actual = $cita['estado'];
+
+    // TODO: Cuando exista un sistema de autenticación, saltar esta validación si el usuario es 'admin'.
+    // if (!isAdmin()) { ... }
+    if (($estado_actual === 'Cancelada' || $estado_actual === 'Completada') && $estado === 'Pendiente') {
+        throw new Exception("Solo un administrador puede volver a poner como Pendiente una cita que ya fue Cancelada o Completada.");
+    }
     
     $stmt = $db->prepare("UPDATE citas SET estado = ? WHERE id = ?");
     $stmt->execute([$estado, $cita_id]);

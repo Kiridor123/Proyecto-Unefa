@@ -16,28 +16,38 @@ try {
     $cedula = strtoupper(preg_replace('/\s+/', '', $cedula));
     
     $fecha_cita = isset($_POST['fecha_cita']) ? trim($_POST['fecha_cita']) : '';
+    $errors = [];
     
     if (empty($fecha_cita)) {
-        throw new Exception("La fecha y hora de la cita es obligatoria.");
+        $errors['fecha_cita'] = "La fecha y hora de la cita es obligatoria.";
+    } else {
+        // Validar que la fecha sea en el futuro
+        $timestamp_cita = strtotime($fecha_cita);
+        if (!$timestamp_cita) {
+            $errors['fecha_cita'] = "Formato de fecha no válido.";
+        } elseif ($timestamp_cita < time()) {
+            $errors['fecha_cita'] = "La fecha de la cita debe ser en el futuro.";
+        }
     }
-    
-    // Validar que la fecha sea en el futuro
-    $timestamp_cita = strtotime($fecha_cita);
-    if (!$timestamp_cita) {
-        throw new Exception("Formato de fecha no válido.");
+
+    if ($paciente_id <= 0) {
+        if (empty($cedula)) {
+            $errors['cedula'] = "Debe seleccionar un paciente o ingresar una cédula.";
+        } elseif (!preg_match('/^[VEJGCPNvejgcpn]-[0-9]+$/', $cedula)) {
+            $errors['cedula'] = "El formato de cédula es inválido. Use letras permitidas (V, E, J, G, C, P, N) seguido de guion y números.";
+        }
     }
-    
-    if ($timestamp_cita < time()) {
-        throw new Exception("La fecha de la cita debe ser en el futuro.");
+
+    if (!empty($errors)) {
+        echo json_encode(['success' => false, 'message' => 'Existen errores de validación', 'errors' => $errors]);
+        exit;
     }
     
     $db->beginTransaction();
     
     // Determinar el paciente_id
     if ($paciente_id <= 0) {
-        if (empty($cedula)) {
-            throw new Exception("Debe seleccionar un paciente o ingresar una cédula.");
-        }
+        // Buscar paciente por cédula
         
         // Buscar paciente por cédula
         $stmtPaciente = $db->prepare("SELECT id FROM pacientes WHERE cedula = ?");

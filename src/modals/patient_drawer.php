@@ -31,17 +31,17 @@
             <!-- Contenedor de Información Real -->
             <div id="drawerData" class="space-y-6 hidden">
                 <!-- Accesos directos / Botones rápidos -->
-                <div class="grid grid-cols-2 gap-3 pb-3">
-                    <button id="btnConsultaAlVuelo" class="flex items-center justify-center gap-1.5 py-2 px-3 bg-brand-50 hover:bg-brand-100 text-brand-700 text-xs font-semibold rounded-xl border border-brand-100 transition shadow-sm">
-                        <i class="ph ph-stethoscope"></i> Nueva Consulta
+                <div class="grid grid-cols-1 sm:grid-cols-2 gap-2 sm:gap-3 pb-3">
+                    <button id="btnConsultaAlVuelo" class="flex items-center justify-center gap-1.5 py-2.5 px-3 bg-brand-50 hover:bg-brand-100 text-brand-700 text-xs font-semibold rounded-xl border border-brand-100 transition shadow-sm min-h-[44px]">
+                        <i class="ph ph-stethoscope text-base"></i> Nueva Consulta
                     </button>
-                    <button id="btnCitaAlVuelo" class="flex items-center justify-center gap-1.5 py-2 px-3 bg-amber-50 hover:bg-amber-100 text-amber-700 text-xs font-semibold rounded-xl border border-amber-100 transition shadow-sm">
-                        <i class="ph ph-calendar-plus"></i> Programar Cita
+                    <button id="btnCitaAlVuelo" class="flex items-center justify-center gap-1.5 py-2.5 px-3 bg-amber-50 hover:bg-amber-100 text-amber-700 text-xs font-semibold rounded-xl border border-amber-100 transition shadow-sm min-h-[44px]">
+                        <i class="ph ph-calendar-plus text-base"></i> Programar Cita
                     </button>
                 </div>
                 <div class="pb-4 border-b border-slate-100">
-                    <button id="btnPrintHistoria" class="w-full flex items-center justify-center gap-1.5 py-2 px-3 bg-blue-600 hover:bg-blue-700 text-white text-xs font-semibold rounded-xl transition shadow-sm">
-                        <i class="ph ph-printer"></i> Imprimir Historia Clínica de Ingreso
+                    <button id="btnPrintHistoria" class="w-full flex items-center justify-center gap-1.5 py-2.5 px-3 bg-blue-600 hover:bg-blue-700 text-white text-xs font-semibold rounded-xl transition shadow-sm min-h-[44px]">
+                        <i class="ph ph-printer text-base"></i> Imprimir Historia Clínica de Ingreso
                     </button>
                 </div>
 

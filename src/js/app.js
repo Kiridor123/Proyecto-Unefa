@@ -25,6 +25,104 @@ function showNotification(type, message, duration = 3000) {
     });
 }
 
+// Alerta consolidada (Pop-up) para errores de validación múltiples
+function showValidationErrors(errors) {
+    let htmlList = '<ul class="text-left text-sm text-slate-600 list-disc list-inside mt-2 space-y-1">';
+    
+    // Soportar tanto array normal (antiguo) como objeto (nuevo)
+    const errorMessages = Array.isArray(errors) ? errors : Object.values(errors);
+    
+    errorMessages.forEach(err => {
+        htmlList += `<li>${escapeHTML(err)}</li>`;
+    });
+    htmlList += '</ul>';
+
+    Swal.fire({
+        icon: 'warning',
+        title: 'Existen errores de validación',
+        html: htmlList,
+        confirmButtonColor: '#3b82f6',
+        confirmButtonText: 'Entendido'
+    });
+}
+
+// Mostrar errores en línea bajo cada input
+function handleInlineErrors(errorsObj, formId) {
+    clearInlineErrors(formId);
+    if (!errorsObj || typeof errorsObj !== 'object' || Array.isArray(errorsObj)) return;
+
+    const form = document.getElementById(formId);
+    if (!form) return;
+
+    for (const [fieldName, message] of Object.entries(errorsObj)) {
+        const input = form.querySelector(`[name="${fieldName}"]`);
+        if (input) {
+            // Pintar borde rojo
+            input.classList.add('border-red-500', 'bg-red-50');
+            input.classList.remove('border-slate-200', 'bg-slate-50', 'focus:border-brand-500');
+            
+            // Crear o buscar el texto de ayuda
+            let errorText = input.nextElementSibling;
+            if (!errorText || !errorText.classList.contains('inline-error-text')) {
+                errorText = document.createElement('p');
+                errorText.className = 'inline-error-text text-red-500 text-[10px] mt-1 font-medium';
+                input.parentNode.insertBefore(errorText, input.nextSibling);
+            }
+            errorText.textContent = message;
+
+            // Limpiar error al cambiar
+            const cleanError = function() {
+                input.classList.remove('border-red-500', 'bg-red-50');
+                input.classList.add('border-slate-200', 'bg-slate-50', 'focus:border-brand-500');
+                if (errorText) errorText.remove();
+                input.removeEventListener('input', cleanError);
+            };
+            input.addEventListener('input', cleanError);
+        }
+    }
+}
+
+// Limpiar todos los errores en línea de un form
+function clearInlineErrors(formId) {
+    const form = document.getElementById(formId);
+    if (!form) return;
+    const errorTexts = form.querySelectorAll('.inline-error-text');
+    errorTexts.forEach(el => el.remove());
+    const invalidInputs = form.querySelectorAll('.border-red-500');
+    invalidInputs.forEach(input => {
+        input.classList.remove('border-red-500', 'bg-red-50');
+        input.classList.add('border-slate-200', 'bg-slate-50', 'focus:border-brand-500');
+    });
+}
+
+// Autoformateo de Cédula (Ej. "v12" -> "V-12")
+document.addEventListener('input', function(e) {
+    if (e.target && e.target.name === 'cedula') {
+        let val = e.target.value.toUpperCase().replace(/\s/g, '');
+        if (val.length > 0) {
+            // Si empieza con letra válida, asegurar el guion
+            if (/^[VEJGCPN]/.test(val)) {
+                if (val.length > 1 && val[1] !== '-') {
+                    val = val.substring(0, 1) + '-' + val.substring(1);
+                }
+            } else if (val.length === 1 && /[0-9]/.test(val)) {
+                // Si alguien mete un número primero, por defecto poner V-
+                val = 'V-' + val;
+            }
+        }
+        e.target.value = val;
+    }
+    
+    // Autoformateo Tensión Arterial (Ej. 12080 -> 120/80)
+    if (e.target && e.target.name === 'vital_ta') {
+        let val = e.target.value.replace(/[^\d/]/g, ''); // solo números y barra
+        if (val.length === 5 && !val.includes('/')) {
+            val = val.substring(0, 3) + '/' + val.substring(3);
+        }
+        e.target.value = val;
+    }
+});
+
 // Escapar HTML para evitar XSS
 function escapeHTML(str) {
     if (!str) return '';

@@ -32,27 +32,7 @@ try {
     $inicio_reposo = !empty($_POST['inicio_reposo']) ? trim($_POST['inicio_reposo']) : null;
     $fin_reposo = !empty($_POST['fin_reposo']) ? trim($_POST['fin_reposo']) : null;
 
-    if ($solo_paciente) {
-        if (!$cedula || !$nombres || !$apellidos || !$categoria_id) {
-            throw new Exception("Faltan campos obligatorios del paciente.");
-        }
-    } else {
-        if (!$cedula || !$nombres || !$apellidos || !$categoria_id || !$fecha_circunstancia || !$resumen) {
-            throw new Exception("Faltan campos obligatorios en el formulario.");
-        }
-
-        // Validar formato de fecha circunstancia
-        if (strtotime($fecha_circunstancia) > time()) {
-            throw new Exception("La fecha de la circunstancia no puede ser una fecha futura.");
-        }
-
-        // Validar rango de reposo
-        if ($inicio_reposo && $fin_reposo) {
-            if (strtotime($fin_reposo) < strtotime($inicio_reposo)) {
-                throw new Exception("La fecha de fin de reposo no puede ser anterior a la de inicio.");
-            }
-        }
-    }
+    // Las validaciones se ejecutarán después de capturar todos los campos
 
     // Nuevos campos del paciente
     $telefono = trim($_POST['telefono'] ?? '');
@@ -110,6 +90,78 @@ try {
     $laboratorios = trim($_POST['laboratorios'] ?? '');
     $plan_tratamiento = trim($_POST['plan_tratamiento'] ?? '');
     $pendiente = trim($_POST['pendiente'] ?? '');
+
+    // -----------------------------------------
+    // VALIDACIONES
+    // -----------------------------------------
+    $errors = [];
+
+    // Validar Paciente
+    if (empty($cedula)) {
+        $errors['cedula'] = "La cédula es obligatoria.";
+    } elseif (!preg_match('/^[VEJGCPNvejgcpn]-[0-9]+$/', $cedula)) {
+        $errors['cedula'] = "El formato de cédula es inválido. Use letras permitidas (V, E, J, G, C, P, N) seguido de guion y números (Ej. V-12345678).";
+    }
+
+    if (empty($nombres)) $errors['nombres'] = "Los nombres son obligatorios.";
+    if (empty($apellidos)) $errors['apellidos'] = "Los apellidos son obligatorios.";
+    if (empty($categoria_id)) $errors['categoria'] = "La categoría es obligatoria.";
+    if (empty($sexo)) $errors['sexo'] = "El sexo es obligatorio.";
+    
+    if (!empty($fecha_nacimiento)) {
+        if (strtotime($fecha_nacimiento) > time()) {
+            $errors['fecha_nacimiento'] = "La fecha de nacimiento no puede ser en el futuro.";
+        }
+        if (strtotime($fecha_nacimiento) < strtotime("-120 years")) {
+            $errors['fecha_nacimiento'] = "La fecha de nacimiento es inválida (demasiado antigua).";
+        }
+    }
+
+    if (!$solo_paciente) {
+        // Validar Consulta
+        if (empty($fecha_circunstancia)) {
+            $errors['fecha_circunstancia'] = "La fecha de la circunstancia es obligatoria.";
+        } elseif (strtotime($fecha_circunstancia) > time()) {
+            $errors['fecha_circunstancia'] = "La fecha de la circunstancia no puede ser futura.";
+        } elseif (!empty($fecha_nacimiento) && strtotime($fecha_circunstancia) < strtotime($fecha_nacimiento)) {
+            $errors['fecha_circunstancia'] = "La fecha de la consulta no puede ser anterior a la fecha de nacimiento.";
+        }
+
+        if (empty($motivo_consulta)) $errors['motivo_consulta'] = "El motivo de la consulta es obligatorio.";
+        if (empty($enfermedad_actual)) $errors['enfermedad_actual'] = "La enfermedad actual es obligatoria.";
+        if (empty($diagnostico)) $errors['diagnostico'] = "El diagnóstico es obligatorio.";
+        if (empty($plan_tratamiento)) $errors['plan_tratamiento'] = "El plan de tratamiento es obligatorio.";
+
+        // Validar rango de reposo
+        if (!empty($inicio_reposo) || !empty($fin_reposo)) {
+            if (empty($inicio_reposo)) {
+                $errors['inicio_reposo'] = "Debe indicar el inicio del reposo.";
+            } elseif (empty($fin_reposo)) {
+                $errors['fin_reposo'] = "Debe indicar el fin del reposo.";
+            } elseif (strtotime($fin_reposo) < strtotime($inicio_reposo)) {
+                $errors['fin_reposo'] = "La fecha de fin de reposo no puede ser anterior a la de inicio.";
+            }
+        }
+
+        // Validar signos vitales numéricos (si no están vacíos)
+        if (!empty($vital_fc) && (!is_numeric($vital_fc) || $vital_fc < 0 || $vital_fc > 300)) {
+            $errors['vital_fc'] = "La Frecuencia Cardíaca debe ser un número válido entre 0 y 300.";
+        }
+        if (!empty($vital_fr) && (!is_numeric($vital_fr) || $vital_fr < 0 || $vital_fr > 100)) {
+            $errors['vital_fr'] = "La Frecuencia Respiratoria debe ser un número válido entre 0 y 100.";
+        }
+        if (!empty($vital_spo2) && (!is_numeric($vital_spo2) || $vital_spo2 < 0 || $vital_spo2 > 100)) {
+            $errors['vital_spo2'] = "La Saturación de Oxígeno (SpO2) debe ser un número entre 0 y 100.";
+        }
+        if (!empty($vital_ta) && !preg_match('/^\d{2,3}\/\d{2,3}$/', $vital_ta)) {
+            $errors['vital_ta'] = "La Tensión Arterial debe tener el formato sistólica/diastólica (Ej. 120/80).";
+        }
+    }
+
+    if (!empty($errors)) {
+        echo json_encode(['success' => false, 'message' => 'Existen errores de validación', 'errors' => $errors]);
+        exit;
+    }
 
     $db->beginTransaction();
 

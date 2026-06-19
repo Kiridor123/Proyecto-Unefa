@@ -27,8 +27,20 @@
             </div>
         </form>
 
-        <!-- Tabla de Vista Previa -->
-        <div class="overflow-x-auto relative">
+        <!-- Loader (compartido) -->
+        <div id="morbilidadLoader" class="hidden py-16 flex flex-col items-center justify-center text-brand-600">
+            <i class="ph ph-spinner-gap animate-spin text-4xl mb-2"></i>
+            <span class="text-sm font-medium">Buscando consultas...</span>
+        </div>
+
+        <!-- Estado vacío / Inicial (compartido) -->
+        <div id="morbilidadEmptyState" class="py-12 flex flex-col items-center justify-center text-slate-400">
+            <i class="ph ph-file-text text-4xl mb-3 text-slate-300"></i>
+            <p class="text-sm" id="morbilidadEmptyText">Seleccione un rango de fechas y haga clic en Buscar.</p>
+        </div>
+
+        <!-- Vista de TABLA para desktop (md+) -->
+        <div id="morbilidadTableWrap" class="hidden md:block overflow-x-auto relative">
             <table class="w-full text-left border-collapse" id="morbilidadTable">
                 <thead>
                     <tr class="bg-slate-50 text-xs uppercase text-slate-500 font-semibold border-b border-slate-200">
@@ -42,11 +54,14 @@
                     </tr>
                 </thead>
                 <tbody class="text-xs divide-y divide-slate-100 bg-white" id="morbilidadTableBody">
-                    <tr>
-                        <td colspan="7" class="text-center py-8 text-slate-400">Seleccione un rango de fechas y haga clic en Buscar.</td>
-                    </tr>
+                    <!-- Datos inyectados por JS -->
                 </tbody>
             </table>
+        </div>
+
+        <!-- Vista de TARJETAS para móvil (< md) -->
+        <div class="md:hidden grid grid-cols-1 sm:grid-cols-2 gap-4 p-4 bg-slate-50/30 rounded-xl" id="morbilidadCards" style="display: none;">
+            <!-- Tarjetas inyectadas por JS -->
         </div>
     </div>
 </section>

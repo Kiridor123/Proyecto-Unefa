@@ -26,19 +26,19 @@
                         <div id="acc-paciente" class="p-4 sm:p-5 border-t border-slate-200 bg-white space-y-4">
                             <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
                                 <div>
-                                    <label class="block text-xs font-semibold text-slate-600 mb-1">Cédula de Identidad *</label>
-                                    <input type="text" name="cedula" id="formCedula" required class="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-lg text-sm focus:border-brand-500 focus:outline-none transition" placeholder="Ej. V-12345678" onblur="buscarPacientePorCedula(this.value)">
+                                    <label class="block text-xs font-semibold text-slate-600 mb-1">Cédula de Identidad <span class="text-brand-600 font-bold">*</span></label>
+                                    <input type="text" name="cedula" id="formCedula" required pattern="^[VEJGCPNvejgcpn]-[0-9]+$" title="Formato válido: V-12345678" class="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-lg text-base sm:text-sm focus:border-brand-500 focus:outline-none transition" placeholder="Ej. V-12345678" onblur="buscarPacientePorCedula(this.value)">
                                 </div>
                                 <div>
-                                    <label class="block text-xs font-semibold text-slate-600 mb-1">Categoría Institucional *</label>
-                                    <select name="categoria" id="formCategoria" required class="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-lg text-sm focus:border-brand-500 focus:outline-none transition">
+                                    <label class="block text-xs font-semibold text-slate-600 mb-1">Categoría Institucional <span class="text-brand-600 font-bold">*</span></label>
+                                    <select name="categoria" id="formCategoria" required class="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-lg text-base sm:text-sm focus:border-brand-500 focus:outline-none transition">
                                         <option value="">Seleccione...</option>
                                         <!-- Opciones cargadas por JS -->
                                     </select>
                                 </div>
                                 <div>
-                                    <label class="block text-xs font-semibold text-slate-600 mb-1">Sexo *</label>
-                                    <select name="sexo" id="formSexo" required class="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-lg text-sm focus:border-brand-500 focus:outline-none transition">
+                                    <label class="block text-xs font-semibold text-slate-600 mb-1">Sexo <span class="text-brand-600 font-bold">*</span></label>
+                                    <select name="sexo" id="formSexo" required class="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-lg text-base sm:text-sm focus:border-brand-500 focus:outline-none transition">
                                         <option value="">Seleccione...</option>
                                         <option value="Femenino">Femenino</option>
                                         <option value="Masculino">Masculino</option>
@@ -46,40 +46,40 @@
                                     </select>
                                 </div>
                                 <div>
-                                    <label class="block text-xs font-semibold text-slate-600 mb-1">Nombres *</label>
-                                    <input type="text" name="nombres" id="formNombres" required class="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-lg text-sm focus:border-brand-500 focus:outline-none transition">
+                                    <label class="block text-xs font-semibold text-slate-600 mb-1">Nombres <span class="text-brand-600 font-bold">*</span></label>
+                                    <input type="text" name="nombres" id="formNombres" required class="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-lg text-base sm:text-sm focus:border-brand-500 focus:outline-none transition">
                                 </div>
                                 <div>
-                                    <label class="block text-xs font-semibold text-slate-600 mb-1">Apellidos *</label>
-                                    <input type="text" name="apellidos" id="formApellidos" required class="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-lg text-sm focus:border-brand-500 focus:outline-none transition">
+                                    <label class="block text-xs font-semibold text-slate-600 mb-1">Apellidos <span class="text-brand-600 font-bold">*</span></label>
+                                    <input type="text" name="apellidos" id="formApellidos" required class="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-lg text-base sm:text-sm focus:border-brand-500 focus:outline-none transition">
                                 </div>
                                 <div>
                                     <label class="block text-xs font-semibold text-slate-600 mb-1">Teléfono</label>
-                                    <input type="text" name="telefono" id="formTelefono" class="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-lg text-sm focus:border-brand-500 focus:outline-none transition" placeholder="Ej. 0412-1234567">
+                                    <input type="text" name="telefono" id="formTelefono" class="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-lg text-base sm:text-sm focus:border-brand-500 focus:outline-none transition" placeholder="Ej. 0412-1234567">
                                 </div>
                                 <div>
                                     <label class="block text-xs font-semibold text-slate-600 mb-1">Lugar de Nacimiento</label>
-                                    <input type="text" name="lugar_nacimiento" id="formLugarNacimiento" class="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-lg text-sm focus:border-brand-500 focus:outline-none transition" placeholder="Ej. Acarigua">
+                                    <input type="text" name="lugar_nacimiento" id="formLugarNacimiento" class="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-lg text-base sm:text-sm focus:border-brand-500 focus:outline-none transition" placeholder="Ej. Acarigua">
                                 </div>
                                 <div>
                                     <label class="block text-xs font-semibold text-slate-600 mb-1">Fecha de Nacimiento</label>
-                                    <input type="date" name="fecha_nacimiento" id="formFechaNacimiento" class="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-lg text-sm focus:border-brand-500 focus:outline-none transition">
+                                    <input type="date" name="fecha_nacimiento" id="formFechaNacimiento" max="<?= date('Y-m-d') ?>" class="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-lg text-base sm:text-sm focus:border-brand-500 focus:outline-none transition">
                                 </div>
                                 <div>
                                     <label class="block text-xs font-semibold text-slate-600 mb-1">Nivel Educativo</label>
-                                    <input type="text" name="nivel_educativo" id="formNivelEducativo" class="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-lg text-sm focus:border-brand-500 focus:outline-none transition" placeholder="Ej. Bachiller / Universitario">
+                                    <input type="text" name="nivel_educativo" id="formNivelEducativo" class="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-lg text-base sm:text-sm focus:border-brand-500 focus:outline-none transition" placeholder="Ej. Bachiller / Universitario">
                                 </div>
                                 <div>
                                     <label class="block text-xs font-semibold text-slate-600 mb-1">Carrera (Solo Estudiantes)</label>
-                                    <input type="text" name="carrera" id="formCarrera" class="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-lg text-sm focus:border-brand-500 focus:outline-none transition" placeholder="Ej. Ing. de Sistemas">
+                                    <input type="text" name="carrera" id="formCarrera" class="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-lg text-base sm:text-sm focus:border-brand-500 focus:outline-none transition" placeholder="Ej. Ing. de Sistemas">
                                 </div>
                                 <div>
                                     <label class="block text-xs font-semibold text-slate-600 mb-1">Semestre (Solo Estudiantes)</label>
-                                    <input type="text" name="semestre" id="formSemestre" class="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-lg text-sm focus:border-brand-500 focus:outline-none transition" placeholder="Ej. 1er Semestre">
+                                    <input type="text" name="semestre" id="formSemestre" class="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-lg text-base sm:text-sm focus:border-brand-500 focus:outline-none transition" placeholder="Ej. 1er Semestre">
                                 </div>
                                 <div class="sm:col-span-2 lg:col-span-3">
                                     <label class="block text-xs font-semibold text-slate-600 mb-1">Dirección de Habitación</label>
-                                    <textarea name="direccion" id="formDireccion" rows="2" class="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-lg text-sm focus:border-brand-500 focus:outline-none transition resize-none" placeholder="Dirección completa del paciente..."></textarea>
+                                    <textarea name="direccion" id="formDireccion" rows="2" class="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-lg text-base sm:text-sm focus:border-brand-500 focus:outline-none transition resize-none" placeholder="Dirección completa del paciente..."></textarea>
                                 </div>
                             </div>
                         </div>
@@ -208,12 +208,12 @@
                         <div id="acc-vitales" class="p-4 sm:p-5 border-t border-slate-200 bg-white hidden space-y-4">
                             <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
                                 <div>
-                                    <label class="block text-xs font-semibold text-slate-600 mb-1">Motivo de Consulta *</label>
-                                    <textarea name="motivo_consulta" required rows="2" class="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-lg text-sm focus:border-brand-500 focus:outline-none transition resize-none" placeholder="Ej. Dolor de cabeza, fiebre..."></textarea>
+                                    <label class="block text-xs font-semibold text-slate-600 mb-1">Motivo de Consulta <span class="text-brand-600 font-bold">*</span></label>
+                                    <textarea name="motivo_consulta" required rows="2" class="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-lg text-base sm:text-sm focus:border-brand-500 focus:outline-none transition resize-none" placeholder="Ej. Dolor de cabeza, fiebre..."></textarea>
                                 </div>
                                 <div>
-                                    <label class="block text-xs font-semibold text-slate-600 mb-1">Enfermedad Actual / Resumen *</label>
-                                    <textarea name="enfermedad_actual" required rows="2" class="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-lg text-sm focus:border-brand-500 focus:outline-none transition resize-none" placeholder="Ej. Paciente refiere cefalea de 3 días de evolución..."></textarea>
+                                    <label class="block text-xs font-semibold text-slate-600 mb-1">Enfermedad Actual / Resumen <span class="text-brand-600 font-bold">*</span></label>
+                                    <textarea name="enfermedad_actual" required rows="2" class="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-lg text-base sm:text-sm focus:border-brand-500 focus:outline-none transition resize-none" placeholder="Ej. Paciente refiere cefalea de 3 días de evolución..."></textarea>
                                 </div>
                             </div>
 
@@ -221,24 +221,24 @@
                                 <h5 class="text-xs font-bold text-slate-700 uppercase tracking-wider mb-2 flex items-center gap-1"><i class="ph ph-waveform"></i> Toma de Signos Vitales</h5>
                                 <div class="grid grid-cols-2 sm:grid-cols-5 gap-3">
                                     <div>
-                                        <label class="block text-[10px] font-semibold text-slate-500 mb-1">Presión Art. (TA)</label>
-                                        <input type="text" name="vital_ta" id="formVitalTA" class="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-lg text-xs focus:border-brand-500 focus:outline-none transition" placeholder="Ej. 120/80 mmHg">
+                                        <label class="block text-xs font-semibold text-slate-600 mb-1">T.A. (mmHg)</label>
+                                        <input type="text" name="vital_ta" id="formVitalTA" pattern="^\d{2,3}\/\d{2,3}$" title="Ej. 120/80" class="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-lg text-base sm:text-xs focus:border-brand-500 focus:outline-none transition" placeholder="Ej. 120/80">
                                     </div>
                                     <div>
-                                        <label class="block text-[10px] font-semibold text-slate-500 mb-1">Frec. Cardíaca (FC)</label>
-                                        <input type="text" name="vital_fc" id="formVitalFC" class="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-lg text-xs focus:border-brand-500 focus:outline-none transition" placeholder="Ej. 72 lpm">
+                                        <label class="block text-xs font-semibold text-slate-600 mb-1">F.C. (lpm)</label>
+                                        <input type="number" name="vital_fc" id="formVitalFC" min="0" max="300" class="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-lg text-base sm:text-xs focus:border-brand-500 focus:outline-none transition" placeholder="Ej. 72">
                                     </div>
                                     <div>
-                                        <label class="block text-[10px] font-semibold text-slate-500 mb-1">Frec. Resp. (FR)</label>
-                                        <input type="text" name="vital_fr" id="formVitalFR" class="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-lg text-xs focus:border-brand-500 focus:outline-none transition" placeholder="Ej. 16 rpm">
+                                        <label class="block text-xs font-semibold text-slate-600 mb-1">F.R. (rpm)</label>
+                                        <input type="number" name="vital_fr" id="formVitalFR" min="0" max="100" class="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-lg text-base sm:text-xs focus:border-brand-500 focus:outline-none transition" placeholder="Ej. 16">
                                     </div>
                                     <div>
-                                        <label class="block text-[10px] font-semibold text-slate-500 mb-1">Saturación (SpO2)</label>
-                                        <input type="text" name="vital_spo2" id="formVitalSpo2" class="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-lg text-xs focus:border-brand-500 focus:outline-none transition" placeholder="Ej. 98%">
+                                        <label class="block text-xs font-semibold text-slate-600 mb-1">SpO2 (%)</label>
+                                        <input type="number" name="vital_spo2" id="formVitalSpo2" min="0" max="100" class="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-lg text-base sm:text-xs focus:border-brand-500 focus:outline-none transition" placeholder="Ej. 98">
                                     </div>
                                     <div class="col-span-2 sm:col-span-1">
-                                        <label class="block text-[10px] font-semibold text-slate-500 mb-1">Peso / Talla</label>
-                                        <input type="text" name="vital_peso_talla" id="formVitalPesoTalla" class="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-lg text-xs focus:border-brand-500 focus:outline-none transition" placeholder="Ej. 65 kg / 1.70 m">
+                                        <label class="block text-xs font-semibold text-slate-600 mb-1">Peso/Talla</label>
+                                        <input type="text" name="vital_peso_talla" id="formVitalPesoTalla" class="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-lg text-base sm:text-xs focus:border-brand-500 focus:outline-none transition" placeholder="Ej. 65 kg / 1.70 m">
                                     </div>
                                 </div>
                             </div>
@@ -256,31 +256,31 @@
                             <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
                                 <div>
                                     <label class="block text-xs font-semibold text-slate-600 mb-1">Piel y Mucosa</label>
-                                    <input type="text" name="fisico_piel" id="formFisicoPiel" class="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-lg text-sm focus:border-brand-500 focus:outline-none transition" placeholder="Sin alteraciones">
+                                    <input type="text" name="fisico_piel" id="formFisicoPiel" class="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-lg text-base sm:text-sm focus:border-brand-500 focus:outline-none transition" placeholder="Sin alteraciones">
                                 </div>
                                 <div>
                                     <label class="block text-xs font-semibold text-slate-600 mb-1">Cabeza</label>
-                                    <input type="text" name="fisico_cabeza" id="formFisicoCabeza" class="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-lg text-sm focus:border-brand-500 focus:outline-none transition" placeholder="Sin alteraciones">
+                                    <input type="text" name="fisico_cabeza" id="formFisicoCabeza" class="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-lg text-base sm:text-sm focus:border-brand-500 focus:outline-none transition" placeholder="Sin alteraciones">
                                 </div>
                                 <div>
                                     <label class="block text-xs font-semibold text-slate-600 mb-1">Cuello</label>
-                                    <input type="text" name="fisico_cuello" id="formFisicoCuello" class="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-lg text-sm focus:border-brand-500 focus:outline-none transition" placeholder="Sin alteraciones">
+                                    <input type="text" name="fisico_cuello" id="formFisicoCuello" class="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-lg text-base sm:text-sm focus:border-brand-500 focus:outline-none transition" placeholder="Sin alteraciones">
                                 </div>
                                 <div>
                                     <label class="block text-xs font-semibold text-slate-600 mb-1">Tórax</label>
-                                    <input type="text" name="fisico_torax" id="formFisicoTorax" class="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-lg text-sm focus:border-brand-500 focus:outline-none transition" placeholder="Sin alteraciones">
+                                    <input type="text" name="fisico_torax" id="formFisicoTorax" class="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-lg text-base sm:text-sm focus:border-brand-500 focus:outline-none transition" placeholder="Sin alteraciones">
                                 </div>
                                 <div>
                                     <label class="block text-xs font-semibold text-slate-600 mb-1">Abdomen</label>
-                                    <input type="text" name="fisico_abdomen" id="formFisicoAbdomen" class="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-lg text-sm focus:border-brand-500 focus:outline-none transition" placeholder="Sin alteraciones">
+                                    <input type="text" name="fisico_abdomen" id="formFisicoAbdomen" class="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-lg text-base sm:text-sm focus:border-brand-500 focus:outline-none transition" placeholder="Sin alteraciones">
                                 </div>
                                 <div>
                                     <label class="block text-xs font-semibold text-slate-600 mb-1">Extremidades</label>
-                                    <input type="text" name="fisico_extremidades" id="formFisicoExtremidades" class="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-lg text-sm focus:border-brand-500 focus:outline-none transition" placeholder="Sin alteraciones">
+                                    <input type="text" name="fisico_extremidades" id="formFisicoExtremidades" class="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-lg text-base sm:text-sm focus:border-brand-500 focus:outline-none transition" placeholder="Sin alteraciones">
                                 </div>
-                                <div class="sm:col-span-2 lg:col-span-3">
+                                <div>
                                     <label class="block text-xs font-semibold text-slate-600 mb-1">Neurológico</label>
-                                    <input type="text" name="fisico_neurologico" id="formFisicoNeurologico" class="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-lg text-sm focus:border-brand-500 focus:outline-none transition" placeholder="Activo, consciente y orientado">
+                                    <input type="text" name="fisico_neurologico" id="formFisicoNeurologico" class="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-lg text-base sm:text-sm focus:border-brand-500 focus:outline-none transition" placeholder="Activo, consciente y orientado">
                                 </div>
                             </div>
                         </div>
@@ -295,34 +295,34 @@
                         <div id="acc-diagnostico" class="p-4 sm:p-5 border-t border-slate-200 bg-white hidden space-y-4">
                             <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
                                 <div>
-                                    <label class="block text-xs font-semibold text-slate-600 mb-1">Impresión Diagnóstica (DX) *</label>
-                                    <textarea name="diagnostico" required rows="2" class="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-lg text-sm focus:border-brand-500 focus:outline-none transition resize-none" placeholder="Ej. Faringitis aguda, etc."></textarea>
+                                    <label class="block text-xs font-semibold text-slate-600 mb-1">Impresión Diagnóstica (DX) <span class="text-brand-600 font-bold">*</span></label>
+                                    <textarea name="diagnostico" required rows="2" class="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-lg text-base sm:text-sm focus:border-brand-500 focus:outline-none transition resize-none" placeholder="Ej. Faringitis aguda, etc."></textarea>
                                 </div>
                                 <div>
-                                    <label class="block text-xs font-semibold text-slate-600 mb-1">Plan de Tratamiento / Indicaciones *</label>
-                                    <textarea name="plan_tratamiento" required rows="2" class="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-lg text-sm focus:border-brand-500 focus:outline-none transition resize-none" placeholder="Ej. Analgésicos cada 8 horas, abundante líquido..."></textarea>
+                                    <label class="block text-xs font-semibold text-slate-600 mb-1">Plan de Tratamiento / Indicaciones <span class="text-brand-600 font-bold">*</span></label>
+                                    <textarea name="plan_tratamiento" required rows="2" class="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-lg text-base sm:text-sm focus:border-brand-500 focus:outline-none transition resize-none" placeholder="Ej. Analgésicos cada 8 horas, abundante líquido..."></textarea>
                                 </div>
                                 <div>
                                     <label class="block text-xs font-semibold text-slate-600 mb-1">Laboratorios u Exámenes Complementarios</label>
-                                    <textarea name="laboratorios" rows="1" class="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-lg text-sm focus:border-brand-500 focus:outline-none transition resize-none" placeholder="Ej. Examen de orina, química sanguínea..."></textarea>
+                                    <textarea name="laboratorios" rows="1" class="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-lg text-base sm:text-sm focus:border-brand-500 focus:outline-none transition resize-none" placeholder="Ej. Examen de orina, química sanguínea..."></textarea>
                                 </div>
                                 <div>
                                     <label class="block text-xs font-semibold text-slate-600 mb-1">Pendiente / Observaciones</label>
-                                    <textarea name="pendiente" rows="1" class="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-lg text-sm focus:border-brand-500 focus:outline-none transition resize-none" placeholder="Ej. Traer resultados en la próxima cita..."></textarea>
+                                    <textarea name="pendiente" rows="1" class="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-lg text-base sm:text-sm focus:border-brand-500 focus:outline-none transition resize-none" placeholder="Ej. Traer resultados en la próxima cita..."></textarea>
                                 </div>
                             </div>
 
-                            <!-- Reposo Médico -->
+                            <!-- --- Reposo Médico --- -->
                             <div class="border-t border-slate-100 pt-3">
                                 <h5 class="text-xs font-bold text-slate-700 uppercase tracking-wider mb-2 flex items-center gap-1"><i class="ph ph-calendar"></i> Configurar Reposo Médico (Opcional)</h5>
                                 <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
                                     <div>
                                         <label class="block text-xs font-semibold text-slate-600 mb-1">Inicio de Reposo</label>
-                                        <input type="date" name="inicio_reposo" id="formInicioReposo" class="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-lg text-sm focus:border-brand-500 focus:outline-none transition">
+                                        <input type="date" name="inicio_reposo" id="formInicioReposo" class="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-lg text-base sm:text-sm focus:border-brand-500 focus:outline-none transition">
                                     </div>
                                     <div>
                                         <label class="block text-xs font-semibold text-slate-600 mb-1">Fin de Reposo</label>
-                                        <input type="date" name="fin_reposo" id="formFinReposo" class="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-lg text-sm focus:border-brand-500 focus:outline-none transition">
+                                        <input type="date" name="fin_reposo" id="formFinReposo" class="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-lg text-base sm:text-sm focus:border-brand-500 focus:outline-none transition">
                                     </div>
                                 </div>
                             </div>
@@ -346,14 +346,18 @@
             </form>
         </div>
         
-        <div class="px-5 py-4 border-t border-slate-100 bg-slate-50 rounded-b-2xl flex justify-end gap-3 shrink-0">
-            <button type="button" onclick="guardarSoloPaciente()" id="btnGuardarSoloPaciente" class="px-4 py-2 text-xs sm:text-sm font-medium text-slate-700 bg-slate-100 hover:bg-slate-200 border border-slate-200 rounded-xl transition shadow-md flex items-center gap-1.5 mr-auto">
-                <i class="ph ph-user-gear"></i> Actualizar sólo Paciente
-            </button>
-            <button onclick="closeModal()" class="px-4 py-2 text-xs sm:text-sm font-medium text-slate-600 hover:bg-slate-200 rounded-xl transition">Cancelar</button>
-            <button type="submit" form="registroForm" id="btnGuardar" class="px-4 py-2 text-xs sm:text-sm font-medium text-white bg-brand-600 hover:bg-brand-700 rounded-xl transition shadow-md flex items-center gap-1.5">
-                <i class="ph ph-floppy-disk"></i> Guardar Consulta
-            </button>
+        <div class="px-5 py-4 border-t border-slate-100 bg-slate-50 rounded-b-2xl flex flex-col sm:flex-row justify-end gap-3 shrink-0">
+            <div class="flex flex-col sm:flex-row w-full justify-between gap-3">
+                <button type="button" onclick="guardarSoloPaciente()" id="btnGuardarSoloPaciente" class="w-full sm:w-auto px-4 py-2.5 text-xs sm:text-sm font-semibold text-slate-700 bg-slate-100 hover:bg-slate-200 border border-slate-200 rounded-xl transition shadow-md flex items-center justify-center gap-1.5 min-h-[44px]">
+                    <i class="ph ph-user-gear text-base"></i> Actualizar sólo Paciente
+                </button>
+                <div class="flex flex-col-reverse sm:flex-row gap-2 sm:gap-3 w-full sm:w-auto justify-end">
+                    <button type="button" onclick="closeModal()" class="w-full sm:w-auto px-4 py-2.5 text-xs sm:text-sm font-semibold text-slate-600 hover:bg-slate-200 rounded-xl transition min-h-[44px]">Cancelar</button>
+                    <button type="submit" form="registroForm" id="btnGuardar" class="w-full sm:w-auto px-4 py-2.5 text-xs sm:text-sm font-semibold text-white bg-brand-600 hover:bg-brand-700 rounded-xl transition shadow-md flex items-center justify-center gap-1.5 min-h-[44px]">
+                        <i class="ph ph-floppy-disk text-base"></i> Guardar Consulta
+                    </button>
+                </div>
+            </div>
         </div>
     </div>
 </div>
