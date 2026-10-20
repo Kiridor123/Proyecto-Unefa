@@ -1,11 +1,9 @@
 <?php
-require_once '../config/Database.php';
+define('API_HTML_RESPONSE', true);
+require_once __DIR__ . '/../config/bootstrap.php';
+api_method('GET');
 
-$consulta_id = isset($_GET['consulta_id']) ? (int)$_GET['consulta_id'] : 0;
-
-if ($consulta_id <= 0) {
-    die("ID de consulta inválido.");
-}
+$consulta_id = api_id($_GET['consulta_id'] ?? null, 'consulta_id');
 
 try {
     $db = Config\Database::getInstance()->getConnection();
@@ -22,14 +20,14 @@ try {
     $consulta = $stmt->fetch();
     
     if (!$consulta) {
-        die("Consulta no encontrada.");
+        throw new ApiException('La consulta no existe.', 404);
     }
     
     // Calcular edad del paciente si tiene fecha de nacimiento
     $edad = 'No especificada';
     if ($consulta['fecha_nacimiento']) {
         $fecha_nac = new DateTime($consulta['fecha_nacimiento']);
-        $hoy = new DateTime();
+        $hoy = new DateTime($consulta['fecha_circunstancia']);
         $edad = $fecha_nac->diff($hoy)->y . ' años';
     }
     
@@ -47,8 +45,8 @@ try {
     $mes_hoy = $meses[(int)$hoy->format('m')];
     $anio_hoy = $hoy->format('Y');
 
-} catch (Exception $e) {
-    die("Error de base de datos: " . $e->getMessage());
+} catch (Throwable $e) {
+    throw $e;
 }
 ?>
 <!DOCTYPE html>
@@ -57,7 +55,7 @@ try {
     <meta charset="UTF-8">
     <title>Informe Médico - <?php echo htmlspecialchars($consulta['cedula']); ?></title>
     <!-- Tailwind CSS -->
-    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="../css/tailwind.css">
     <style>
         @media print {
             body {

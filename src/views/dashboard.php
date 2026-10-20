@@ -1,60 +1,35 @@
-<!-- SECTION 1: DASHBOARD -->
-<section id="section-dashboard" class="tab-section flex flex-col gap-6 sm:gap-8">
-    <!-- Tarjetas Dinámicas -->
-    <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-6">
-        <div class="glass-panel p-5 sm:p-6 rounded-2xl border-l-4 border-brand-500 flex items-center justify-between hover:-translate-y-1 hover:shadow-md transition-all duration-300">
-            <div>
-                <p class="text-xs sm:text-sm font-medium text-slate-500 mb-1">Total Pacientes</p>
-                <h3 class="text-2xl sm:text-3xl font-bold text-slate-800" id="statPacientes">-</h3>
-            </div>
-            <div class="w-11 h-11 sm:w-12 sm:h-12 bg-brand-50 text-brand-600 rounded-xl flex items-center justify-center text-xl sm:text-2xl shrink-0"><i class="ph ph-users"></i></div>
-        </div>
-        
-        <div class="glass-panel p-5 sm:p-6 rounded-2xl border-l-4 border-amber-400 flex items-center justify-between hover:-translate-y-1 hover:shadow-md transition-all duration-300">
-            <div>
-                <p class="text-xs sm:text-sm font-medium text-slate-500 mb-1">Citas Pendientes</p>
-                <h3 class="text-2xl sm:text-3xl font-bold text-slate-800" id="statCitas">-</h3>
-            </div>
-            <div class="w-11 h-11 sm:w-12 sm:h-12 bg-amber-50 text-amber-500 rounded-xl flex items-center justify-center text-xl sm:text-2xl shrink-0"><i class="ph ph-calendar-check"></i></div>
-        </div>
-
-        <div class="glass-panel p-5 sm:p-6 rounded-2xl border-l-4 border-emerald-500 flex items-center justify-between hover:-translate-y-1 hover:shadow-md transition-all duration-300">
-            <div>
-                <p class="text-xs sm:text-sm font-medium text-slate-500 mb-1">Consultas del Mes</p>
-                <h3 class="text-2xl sm:text-3xl font-bold text-slate-800" id="statConsultas">-</h3>
-            </div>
-            <div class="w-11 h-11 sm:w-12 sm:h-12 bg-emerald-50 text-emerald-500 rounded-xl flex items-center justify-center text-xl sm:text-2xl shrink-0"><i class="ph ph-stethoscope"></i></div>
-        </div>
-
-        <div class="glass-panel p-5 sm:p-6 rounded-2xl border-l-4 border-rose-500 flex items-center justify-between hover:-translate-y-1 hover:shadow-md transition-all duration-300">
-            <div>
-                <p class="text-xs sm:text-sm font-medium text-slate-500 mb-1">Reposos Activos</p>
-                <h3 class="text-2xl sm:text-3xl font-bold text-slate-800" id="statReposos">-</h3>
-            </div>
-            <div class="w-11 h-11 sm:w-12 sm:h-12 bg-rose-50 text-rose-500 rounded-xl flex items-center justify-center text-xl sm:text-2xl shrink-0"><i class="ph ph-first-aid"></i></div>
+<section id="section-dashboard" class="tab-section" aria-label="Resumen de la actividad médica">
+    <div class="section-intro">
+        <p>Una vista de la actividad del servicio y el acceso a cada atención.</p>
+        <div class="action-group">
+            <button type="button" onclick="openCitaModal()" class="btn btn-secondary"><i class="ph ph-calendar-plus" aria-hidden="true"></i>Agendar cita</button>
+            <button type="button" onclick="openModal()" class="btn btn-primary"><i class="ph ph-plus" aria-hidden="true"></i>Registrar consulta</button>
         </div>
     </div>
-
-    <!-- Gráficos del Dashboard -->
-    <div class="grid grid-cols-1 lg:grid-cols-2 gap-6 sm:gap-8">
-        <!-- Gráfico 1: Categorías -->
-        <div class="glass-panel p-4 sm:p-6 rounded-2xl border border-slate-200 shadow-sm flex flex-col min-h-[300px] sm:min-h-[350px]">
-            <h4 class="text-xs sm:text-sm font-semibold text-slate-700 uppercase tracking-wider mb-4 flex items-center gap-2">
-                <i class="ph ph-chart-pie text-brand-600 text-lg"></i> Distribución por Categoría
-            </h4>
-            <div class="flex-1 flex items-center justify-center relative w-full h-[220px] sm:h-[250px]">
-                <canvas id="categoryChart"></canvas>
-            </div>
-        </div>
-
-        <!-- Gráfico 2: Consultas Mensuales -->
-        <div class="glass-panel p-4 sm:p-6 rounded-2xl border border-slate-200 shadow-sm flex flex-col min-h-[300px] sm:min-h-[350px]">
-            <h4 class="text-xs sm:text-sm font-semibold text-slate-700 uppercase tracking-wider mb-4 flex items-center gap-2">
-                <i class="ph ph-chart-bar text-brand-600 text-lg"></i> Consultas Históricas
-            </h4>
-            <div class="flex-1 flex items-center justify-center relative w-full h-[220px] sm:h-[250px]">
-                <canvas id="historyChart"></canvas>
-            </div>
-        </div>
+    <div id="dashboardError" class="state-panel state-error hidden" role="status"></div>
+    <div class="metric-strip" aria-label="Indicadores del servicio">
+        <div class="metric"><p>Pacientes registrados</p><strong id="statPacientes" class="num">—</strong><span>Expedientes en el sistema</span></div>
+        <div class="metric"><p>Citas pendientes</p><strong id="statCitas" class="num">—</strong><span>Por atender</span></div>
+        <div class="metric"><p>Consultas del mes</p><strong id="statConsultas" class="num">—</strong><span>Atenciones registradas</span></div>
+        <div class="metric"><p>Reposos activos</p><strong id="statReposos" class="num">—</strong><span>Con vigencia actual</span></div>
     </div>
+    <div class="section-heading"><div><h2>Actividad asistencial</h2><p id="dashboardUpdated">Consultando la información del servicio…</p></div><button type="button" class="btn btn-text" onclick="loadStats()"><i class="ph ph-arrow-clockwise" aria-hidden="true"></i>Actualizar</button></div>
+    <div class="analytics-grid">
+        <section class="panel chart-panel" aria-labelledby="historyChartTitle">
+            <div class="panel-heading"><div><h3 id="historyChartTitle">Consultas por mes</h3><p>Historial de atenciones registradas</p></div><span class="chart-unit">Consultas</span></div>
+            <div class="chart-frame"><canvas id="historyChart" role="img" aria-label="Número de consultas por mes"></canvas></div>
+        </section>
+        <section class="panel chart-panel" aria-labelledby="categoryChartTitle">
+            <div class="panel-heading"><div><h3 id="categoryChartTitle">Pacientes por categoría</h3><p>Comunidad atendida por el servicio</p></div></div>
+            <div class="chart-frame"><canvas id="categoryChart" role="img" aria-label="Número de pacientes por categoría institucional"></canvas></div>
+        </section>
+    </div>
+    <section class="workflow-section" aria-labelledby="workflowTitle">
+        <div class="section-heading"><div><h2 id="workflowTitle">Continúe la atención</h2><p>Acceda al expediente, a la agenda o al reporte de la jornada.</p></div></div>
+        <div class="workflow-links">
+            <a href="#pacientes" onclick="switchTab('pacientes'); return false;"><span><strong>Consultar expedientes</strong><small>Pacientes e historia clínica</small></span><i class="ph ph-arrow-up-right" aria-hidden="true"></i></a>
+            <a href="#citas" onclick="switchTab('citas'); return false;"><span><strong>Revisar la agenda</strong><small>Citas y estados de atención</small></span><i class="ph ph-arrow-up-right" aria-hidden="true"></i></a>
+            <a href="#reportes" onclick="switchTab('reportes'); return false;"><span><strong>Preparar morbilidad</strong><small>Atenciones por periodo</small></span><i class="ph ph-arrow-up-right" aria-hidden="true"></i></a>
+        </div>
+    </section>
 </section>

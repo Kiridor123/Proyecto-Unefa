@@ -1,15 +1,7 @@
-<!-- Encabezado -->
-<header class="h-16 glass-panel sticky top-0 z-20 flex justify-between items-center px-4 sm:px-8 border-b border-slate-200">
-    <div class="flex items-center gap-3">
-        <button onclick="toggleMobileSidebar()" class="md:hidden text-slate-600 hover:text-brand-600 p-2 rounded-lg hover:bg-slate-100 transition">
-            <i class="ph ph-list text-2xl"></i>
-        </button>
-        <h2 id="headerTitle" class="text-lg sm:text-xl font-semibold text-slate-800">Panel de Control</h2>
+<header class="page-header">
+    <div class="page-title-group">
+        <button id="sidebarToggle" type="button" class="icon-button mobile-menu" onclick="toggleMobileSidebar()" aria-label="Abrir menú de navegación" aria-controls="sidebar" aria-expanded="false"><i class="ph ph-list" aria-hidden="true"></i></button>
+        <h1 id="headerTitle" tabindex="-1">Resumen general</h1>
     </div>
-    <div class="flex items-center gap-3">
-        <span class="text-[10px] sm:text-xs bg-brand-50 text-brand-600 border border-brand-100 px-2.5 py-1 sm:px-3 sm:py-1.5 rounded-full font-medium flex items-center gap-1 sm:gap-1.5">
-            <span class="w-1.5 h-1.5 sm:w-2 sm:h-2 rounded-full bg-emerald-500 animate-pulse"></span>
-            Admin
-        </span>
-    </div>
+    <div class="workspace-label"><span class="workspace-symbol" aria-hidden="true">U</span><span>Atención universitaria<small>Salud UNEFA</small></span></div>
 </header>

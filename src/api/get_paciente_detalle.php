@@ -1,73 +1,26 @@
 <?php
-require_once '../config/Database.php';
-
-header('Content-Type: application/json');
-
-$id = isset($_GET['id']) ? (int)$_GET['id'] : 0;
-
-if ($id <= 0) {
-    echo json_encode(['success' => false, 'message' => 'ID de paciente no válido.']);
-    exit;
+declare(strict_types=1);
+require_once __DIR__ . '/../config/bootstrap.php';
+api_method('GET');
+$id = api_id($_GET['id'] ?? null);
+$db = api_db();
+$statement = $db->prepare('SELECT p.*, c.nombre AS categoria FROM pacientes p JOIN categorias_institucionales c ON p.categoria_id = c.id WHERE p.id = ?');
+$statement->execute([$id]);
+$patient = $statement->fetch();
+if (!$patient) throw new ApiException('El paciente no existe.', 404);
+$statement = $db->prepare('SELECT * FROM consultas WHERE paciente_id = ? ORDER BY fecha_circunstancia DESC, fecha_registro DESC, id DESC');
+$statement->execute([$id]);
+$consultations = $statement->fetchAll();
+// One attachment query for the entire history, avoiding an extra query per visit.
+$statement = $db->prepare('SELECT a.id, a.consulta_id, a.tipo_archivo, a.fecha_subida FROM archivos_adjuntos a JOIN consultas c ON c.id = a.consulta_id WHERE c.paciente_id = ? ORDER BY a.id');
+$statement->execute([$id]);
+$attachments = [];
+foreach ($statement->fetchAll() as $attachment) {
+    $attachment['ruta_archivo'] = 'api/download_archivo.php?id=' . $attachment['id'];
+    $attachments[$attachment['consulta_id']][] = $attachment;
 }
-
-try {
-    $db = Config\Database::getInstance()->getConnection();
-    
-    // 1. Obtener todos los datos del paciente
-    $stmtPaciente = $db->prepare("
-        SELECT p.*, c.nombre AS categoria 
-        FROM pacientes p 
-        JOIN categorias_institucionales c ON p.categoria_id = c.id 
-        WHERE p.id = ?
-    ");
-    $stmtPaciente->execute([$id]);
-    $paciente = $stmtPaciente->fetch();
-    
-    if (!$paciente) {
-        echo json_encode(['success' => false, 'message' => 'Paciente no encontrado.']);
-        exit;
-    }
-    
-    // 2. Obtener historial completo de consultas
-    $stmtConsultas = $db->prepare("
-        SELECT * 
-        FROM consultas 
-        WHERE paciente_id = ? 
-        ORDER BY fecha_registro DESC
-    ");
-    $stmtConsultas->execute([$id]);
-    $consultas = $stmtConsultas->fetchAll();
-    
-    // Para cada consulta, obtener sus archivos adjuntos
-    foreach ($consultas as &$consulta) {
-        $stmtArchivos = $db->prepare("
-            SELECT id, ruta_archivo, tipo_archivo, fecha_subida 
-            FROM archivos_adjuntos 
-            WHERE consulta_id = ?
-        ");
-        $stmtArchivos->execute([$consulta['id']]);
-        $consulta['archivos'] = $stmtArchivos->fetchAll();
-    }
-    
-    // 3. Obtener citas del paciente
-    $stmtCitas = $db->prepare("
-        SELECT id, fecha_cita, estado 
-        FROM citas 
-        WHERE paciente_id = ? 
-        ORDER BY fecha_cita DESC
-    ");
-    $stmtCitas->execute([$id]);
-    $citas = $stmtCitas->fetchAll();
-    
-    echo json_encode([
-        'success' => true,
-        'data' => [
-            'paciente' => $paciente,
-            'consultas' => $consultas,
-            'citas' => $citas
-        ]
-    ]);
-    
-} catch (Exception $e) {
-    echo json_encode(['success' => false, 'message' => 'Error al obtener detalles del paciente: ' . $e->getMessage()]);
-}
+foreach ($consultations as &$consultation) $consultation['archivos'] = $attachments[$consultation['id']] ?? [];
+unset($consultation);
+$statement = $db->prepare('SELECT id, fecha_cita, estado FROM citas WHERE paciente_id = ? ORDER BY fecha_cita DESC, id DESC');
+$statement->execute([$id]);
+api_json(['success' => true, 'data' => ['paciente' => $patient, 'consultas' => $consultations, 'citas' => $statement->fetchAll()]]);

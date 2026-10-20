@@ -1,0 +1,19 @@
+{
+  "name": "salud-unefa-assets",
+  "version": "1.0.0",
+  "private": true,
+  "engines": {
+    "node": ">=22"
+  },
+  "description": "Local frontend assets for the PHP application",
+  "scripts": {
+    "build": "node scripts/build-assets.mjs",
+    "test:api": "node tests/api-smoke.mjs"
+  },
+  "devDependencies": {
+    "@phosphor-icons/web": "2.1.1",
+    "chart.js": "4.4.8",
+    "sweetalert2": "11.26.25",
+    "tailwindcss": "3.4.19"
+  }
+}

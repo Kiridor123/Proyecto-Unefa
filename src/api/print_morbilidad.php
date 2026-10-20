@@ -1,12 +1,11 @@
 <?php
-require_once '../config/Database.php';
+define('API_HTML_RESPONSE', true);
+require_once __DIR__ . '/../config/bootstrap.php';
+api_method('GET');
 
-$fecha_inicio = $_GET['fecha_inicio'] ?? '';
-$fecha_fin = $_GET['fecha_fin'] ?? '';
-
-if (empty($fecha_inicio) || empty($fecha_fin)) {
-    die("Rango de fechas inválido o incompleto.");
-}
+$errors = [];
+[$fecha_inicio, $fecha_fin] = Config\Validation::dateRange($_GET, $errors);
+api_validate($errors);
 
 try {
     $db = Config\Database::getInstance()->getConnection();
@@ -29,8 +28,8 @@ try {
     $fecha_inicio_f = date('d/m/Y', strtotime($fecha_inicio));
     $fecha_fin_f = date('d/m/Y', strtotime($fecha_fin));
 
-} catch (Exception $e) {
-    die("Error de base de datos: " . $e->getMessage());
+} catch (Throwable $e) {
+    throw $e;
 }
 ?>
 <!DOCTYPE html>
@@ -39,7 +38,7 @@ try {
     <meta charset="UTF-8">
     <title>Reporte de Morbilidad (<?php echo $fecha_inicio_f; ?> al <?php echo $fecha_fin_f; ?>)</title>
     <!-- Tailwind CSS -->
-    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="../css/tailwind.css">
     <style>
         @media print {
             @page {

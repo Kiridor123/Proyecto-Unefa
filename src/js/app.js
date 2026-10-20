@@ -1,403 +1,439 @@
-// Variables globales
+// Shared state. Lists are refreshed after every successful mutation.
 let pacientesList = [];
 let citasList = [];
 let currentTab = 'dashboard';
 let categoryChartInstance = null;
 let historyChartInstance = null;
+const activeRequests = new Map();
+const surfaceOpeners = new Map();
 
-// Sistema de notificaciones Toast auto-cerrables (SweetAlert2)
-function showNotification(type, message, duration = 3000) {
-    const Toast = Swal.mixin({
-        toast: true,
-        position: 'top-end',
-        showConfirmButton: false,
-        timer: duration,
-        timerProgressBar: true,
-        didOpen: (toast) => {
-            toast.addEventListener('mouseenter', Swal.stopTimer);
-            toast.addEventListener('mouseleave', Swal.resumeTimer);
-        }
-    });
-
-    Toast.fire({
-        icon: type, // 'success', 'error', 'warning', 'info'
-        title: message
-    });
-}
-
-// Alerta consolidada (Pop-up) para errores de validación múltiples
-function showValidationErrors(errors) {
-    let htmlList = '<ul class="text-left text-sm text-slate-600 list-disc list-inside mt-2 space-y-1">';
-    
-    // Soportar tanto array normal (antiguo) como objeto (nuevo)
-    const errorMessages = Array.isArray(errors) ? errors : Object.values(errors);
-    
-    errorMessages.forEach(err => {
-        htmlList += `<li>${escapeHTML(err)}</li>`;
-    });
-    htmlList += '</ul>';
-
-    Swal.fire({
-        icon: 'warning',
-        title: 'Existen errores de validación',
-        html: htmlList,
-        confirmButtonColor: '#3b82f6',
-        confirmButtonText: 'Entendido'
-    });
-}
-
-// Mostrar errores en línea bajo cada input
-function handleInlineErrors(errorsObj, formId) {
-    clearInlineErrors(formId);
-    if (!errorsObj || typeof errorsObj !== 'object' || Array.isArray(errorsObj)) return;
-
-    const form = document.getElementById(formId);
-    if (!form) return;
-
-    for (const [fieldName, message] of Object.entries(errorsObj)) {
-        const input = form.querySelector(`[name="${fieldName}"]`);
-        if (input) {
-            // Pintar borde rojo
-            input.classList.add('border-red-500', 'bg-red-50');
-            input.classList.remove('border-slate-200', 'bg-slate-50', 'focus:border-brand-500');
-            
-            // Crear o buscar el texto de ayuda
-            let errorText = input.nextElementSibling;
-            if (!errorText || !errorText.classList.contains('inline-error-text')) {
-                errorText = document.createElement('p');
-                errorText.className = 'inline-error-text text-red-500 text-[10px] mt-1 font-medium';
-                input.parentNode.insertBefore(errorText, input.nextSibling);
-            }
-            errorText.textContent = message;
-
-            // Limpiar error al cambiar
-            const cleanError = function() {
-                input.classList.remove('border-red-500', 'bg-red-50');
-                input.classList.add('border-slate-200', 'bg-slate-50', 'focus:border-brand-500');
-                if (errorText) errorText.remove();
-                input.removeEventListener('input', cleanError);
-            };
-            input.addEventListener('input', cleanError);
-        }
+class ApiError extends Error {
+    constructor(message, status = 0, errors = {}) {
+        super(message);
+        this.name = 'ApiError';
+        this.status = status;
+        this.errors = errors || {};
     }
 }
 
-// Limpiar todos los errores en línea de un form
+// Reads with the same key cancel the previous request to avoid replacing fresh data.
+async function apiRequest(url, options = {}, requestKey = '') {
+    const controller = new AbortController();
+    if (requestKey) {
+        activeRequests.get(requestKey)?.abort();
+        activeRequests.set(requestKey, controller);
+    }
+    let timedOut = false;
+    const timeout = setTimeout(() => { timedOut = true; controller.abort(); }, 20000);
+    const headers = new Headers(options.headers || {});
+    headers.set('Accept', 'application/json');
+    headers.set('X-Requested-With', 'XMLHttpRequest');
+    const token = document.querySelector('meta[name="csrf-token"]')?.content;
+    if (token) headers.set('X-CSRF-Token', token);
+    try {
+        const response = await fetch(url, { ...options, headers, signal: controller.signal, credentials: 'same-origin', cache: 'no-store' });
+        let payload;
+        try { payload = await response.json(); }
+        catch { throw new ApiError('El servidor no devolvió una respuesta válida. Intente de nuevo.', response.status); }
+        if (!response.ok || !payload.success) {
+            throw new ApiError(payload.message || 'No se pudo completar la solicitud. Intente de nuevo.', response.status, payload.errors);
+        }
+        return payload;
+    } catch (error) {
+        if (timedOut) throw new ApiError('El servidor tardó demasiado en responder. Intente de nuevo.');
+        if (error.name === 'AbortError' || error instanceof ApiError) throw error;
+        throw new ApiError('No se pudo conectar con el servidor. Revise su conexión e intente de nuevo.');
+    } finally {
+        clearTimeout(timeout);
+        if (requestKey && activeRequests.get(requestKey) === controller) activeRequests.delete(requestKey);
+    }
+}
+
+function escapeHTML(value) {
+    return String(value ?? '').replace(/[&<>'"]/g, character => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', "'": '&#39;', '"': '&quot;' }[character]));
+}
+function normalizeSearch(value) {
+    return String(value ?? '').normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLocaleLowerCase('es').trim();
+}
+function normalizeCedula(value) {
+    const text = String(value ?? '').toUpperCase().replace(/\s/g, '');
+    return /^\d/.test(text) ? `V-${text}` : text.replace(/^([VEJGCPN])(?!-)/, '$1-');
+}
+function localDate(date = new Date()) {
+    return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`;
+}
+function localDateTime(date = new Date()) {
+    return `${localDate(date)}T${String(date.getHours()).padStart(2, '0')}:${String(date.getMinutes()).padStart(2, '0')}`;
+}
+function formatDate(value, includeTime = false) {
+    if (!value) return 'Sin registro';
+    const parts = String(value).match(/^(\d{4})-(\d{2})-(\d{2})(?:[ T](\d{2}):(\d{2}))?/);
+    if (!parts) return String(value);
+    return `${parts[3]}/${parts[2]}/${parts[1]}${includeTime && parts[4] ? ` · ${parts[4]}:${parts[5]}` : ''}`;
+}
+function debounce(callback, delay = 180) {
+    let timer;
+    return (...args) => { clearTimeout(timer); timer = setTimeout(() => callback(...args), delay); };
+}
+function setVisible(element, visible, display = '') {
+    if (!element) return;
+    element.classList.toggle('hidden', !visible);
+    element.style.display = visible ? display : 'none';
+}
+function textAction(label, icon, callback, className = 'btn btn-secondary') {
+    const button = document.createElement('button');
+    button.type = 'button';
+    button.className = className;
+    if (icon) {
+        const symbol = document.createElement('i');
+        symbol.className = `ph ${icon}`;
+        symbol.setAttribute('aria-hidden', 'true');
+        button.append(symbol);
+    }
+    button.append(document.createTextNode(label));
+    button.addEventListener('click', event => { event.stopPropagation(); callback(); });
+    return button;
+}
+function showBlockError(id, anchor, message, retry) {
+    let element = document.getElementById(id);
+    if (!element) {
+        element = document.createElement('div');
+        element.id = id;
+        element.className = 'state-panel';
+        anchor?.parentNode.insertBefore(element, anchor);
+    }
+    element.replaceChildren();
+    element.setAttribute('role', 'status');
+    const copy = document.createElement('p');
+    copy.textContent = message;
+    element.append(copy, textAction('Reintentar', 'ph-arrow-clockwise', retry));
+    setVisible(element, true);
+}
+
+function showNotification(type, message, duration = 4000) {
+    if (typeof Swal !== 'undefined') {
+        Swal.fire({ toast: true, position: 'top-end', showConfirmButton: false, timer: duration,
+            timerProgressBar: true, icon: type, titleText: String(message || 'Operación completada'),
+            didOpen: toast => { toast.addEventListener('mouseenter', Swal.stopTimer); toast.addEventListener('mouseleave', Swal.resumeTimer); }
+        });
+        return;
+    }
+    let region = document.getElementById('notificationRegion');
+    if (!region) {
+        region = document.createElement('div');
+        region.id = 'notificationRegion';
+        region.className = 'notification-region';
+        region.setAttribute('role', 'status');
+        document.body.append(region);
+    }
+    region.textContent = message;
+    setTimeout(() => { region.textContent = ''; }, duration);
+}
+
+function showValidationErrors(errors) {
+    const messages = Array.isArray(errors) ? errors : Object.values(errors || {});
+    if (messages.length) showNotification('warning', messages.join(' '), 6000);
+}
 function clearInlineErrors(formId) {
     const form = document.getElementById(formId);
     if (!form) return;
-    const errorTexts = form.querySelectorAll('.inline-error-text');
-    errorTexts.forEach(el => el.remove());
-    const invalidInputs = form.querySelectorAll('.border-red-500');
-    invalidInputs.forEach(input => {
+    form.querySelectorAll('.inline-error-text').forEach(element => element.remove());
+    form.querySelectorAll('[aria-invalid="true"]').forEach(input => {
+        input.removeAttribute('aria-invalid');
+        input.removeAttribute('aria-describedby');
         input.classList.remove('border-red-500', 'bg-red-50');
-        input.classList.add('border-slate-200', 'bg-slate-50', 'focus:border-brand-500');
     });
 }
-
-// Autoformateo de Cédula (Ej. "v12" -> "V-12")
-document.addEventListener('input', function(e) {
-    if (e.target && e.target.name === 'cedula') {
-        let val = e.target.value.toUpperCase().replace(/\s/g, '');
-        if (val.length > 0) {
-            // Si empieza con letra válida, asegurar el guion
-            if (/^[VEJGCPN]/.test(val)) {
-                if (val.length > 1 && val[1] !== '-') {
-                    val = val.substring(0, 1) + '-' + val.substring(1);
-                }
-            } else if (val.length === 1 && /[0-9]/.test(val)) {
-                // Si alguien mete un número primero, por defecto poner V-
-                val = 'V-' + val;
-            }
-        }
-        e.target.value = val;
+function revealField(input) {
+    const section = input?.closest('[id^="acc-"]');
+    if (section) toggleAccordion(section.id);
+    input?.focus();
+}
+function handleInlineErrors(errors, formId) {
+    clearInlineErrors(formId);
+    const form = document.getElementById(formId);
+    if (!form || !errors || Array.isArray(errors)) return;
+    let first;
+    for (const [name, message] of Object.entries(errors)) {
+        const input = Array.from(form.elements).find(field => field.name === name);
+        if (!input || input.type === 'hidden') continue;
+        const error = document.createElement('p');
+        error.id = `${formId}-error-${name}`;
+        error.className = 'inline-error-text';
+        error.textContent = String(message);
+        input.setAttribute('aria-invalid', 'true');
+        input.setAttribute('aria-describedby', error.id);
+        input.insertAdjacentElement('afterend', error);
+        first ||= input;
     }
-    
-    // Autoformateo Tensión Arterial (Ej. 12080 -> 120/80)
-    if (e.target && e.target.name === 'vital_ta') {
-        let val = e.target.value.replace(/[^\d/]/g, ''); // solo números y barra
-        if (val.length === 5 && !val.includes('/')) {
-            val = val.substring(0, 3) + '/' + val.substring(3);
+    if (first) revealField(first);
+    return first;
+}
+function showFormError(error, formId) {
+    handleInlineErrors(error.errors, formId);
+    showNotification('error', error.message, 6000);
+}
+function validateForm(form, patientOnly = false) {
+    clearInlineErrors(form.id);
+    const patientFields = ['cedula', 'categoria', 'sexo', 'nombres', 'apellidos'];
+    for (const field of form.elements) {
+        if (patientOnly && !patientFields.includes(field.name)) continue;
+        if (field.required && typeof field.value === 'string' && !field.value.trim()) field.value = '';
+        if (field.willValidate && !field.checkValidity()) {
+            revealField(field);
+            field.reportValidity();
+            return false;
         }
-        e.target.value = val;
     }
-});
-
-// Escapar HTML para evitar XSS
-function escapeHTML(str) {
-    if (!str) return '';
-    return str.replace(/[&<>'"]/g, 
-        tag => ({
-            '&': '&amp;',
-            '<': '&lt;',
-            '>': '&gt;',
-            "'": '&#39;',
-            '"': '&quot;'
-        }[tag] || tag)
-    );
+    return true;
+}
+function setFormBusy(form, busy) {
+    form.dataset.saving = busy ? 'true' : 'false';
+    form.setAttribute('aria-busy', String(busy));
+    const buttons = [...form.querySelectorAll('button'), ...document.querySelectorAll(`[form="${form.id}"]`)];
+    if (form.id === 'registroForm') buttons.push(document.getElementById('btnGuardarSoloPaciente'));
+    buttons.filter(Boolean).forEach(button => { button.disabled = busy; });
 }
 
-// Toggles para Sidebar móvil con Transición Suave
-function toggleMobileSidebar() {
+function syncScrollLock() {
+    const open = ['patientModal', 'citaModal', 'patientDrawer'].some(id => {
+        const element = document.getElementById(id);
+        return element && !element.classList.contains('hidden');
+    }) || (window.innerWidth < 1024 && document.getElementById('sidebar')?.classList.contains('translate-x-0'));
+    document.body.style.overflow = open ? 'hidden' : '';
+}
+function openSurface(id, contentId, titleId) {
+    const surface = document.getElementById(id);
+    const content = document.getElementById(contentId);
+    if (!surface || !content) return;
+    // An old toast must not cover the title of the next task; newly raised messages remain visible.
+    if (typeof Swal !== 'undefined' && document.querySelector('.swal2-toast')) Swal.close();
+    surfaceOpeners.set(id, document.activeElement);
+    surface.classList.remove('hidden');
+    surface.removeAttribute('aria-hidden');
+    content.setAttribute('role', 'dialog');
+    content.setAttribute('aria-modal', 'true');
+    content.setAttribute('aria-labelledby', titleId);
+    content.tabIndex = -1;
+    content.classList.remove('modal-enter', 'modal-leave-active', 'translate-x-full');
+    content.classList.add('modal-enter-active');
+    syncScrollLock();
+    requestAnimationFrame(() => (content.querySelector('input:not([type="hidden"]), button') || content).focus());
+}
+function closeSurface(id, contentId) {
+    const surface = document.getElementById(id);
+    const content = document.getElementById(contentId);
+    if (!surface || !content) return;
+    surface.classList.add('hidden');
+    surface.setAttribute('aria-hidden', 'true');
+    content.classList.remove('modal-enter-active');
+    content.classList.add(id === 'patientDrawer' ? 'translate-x-full' : 'modal-enter');
+    syncScrollLock();
+    const opener = surfaceOpeners.get(id);
+    if (opener?.isConnected && opener.getClientRects().length) opener.focus();
+    surfaceOpeners.delete(id);
+}
+function toggleMobileSidebar(force) {
     const sidebar = document.getElementById('sidebar');
-    const overlay = document.getElementById('sidebarOverlay');
-    
-    const isOpen = sidebar.classList.contains('translate-x-0');
-    
-    if (isOpen) {
-        sidebar.classList.remove('translate-x-0');
-        sidebar.classList.add('-translate-x-full');
-        overlay.classList.add('hidden');
-    } else {
-        sidebar.classList.add('translate-x-0');
-        sidebar.classList.remove('-translate-x-full');
-        overlay.classList.remove('hidden');
-    }
+    if (!sidebar) return;
+    const open = typeof force === 'boolean' ? force : !sidebar.classList.contains('translate-x-0');
+    sidebar.classList.toggle('translate-x-0', open);
+    sidebar.classList.toggle('-translate-x-full', !open);
+    document.getElementById('sidebarToggle')?.setAttribute('aria-expanded', String(open));
+    setVisible(document.getElementById('sidebarOverlay'), open);
+    syncScrollLock();
+    if (open) sidebar.querySelector('.nav-link')?.focus();
 }
-
-// Navegación de secciones (TABS)
-function switchTab(tabName) {
+function switchTab(tabName, updateHistory = true) {
+    const titles = { dashboard: 'Resumen de atención', pacientes: 'Pacientes', citas: 'Agenda de citas', reportes: 'Reportes de morbilidad' };
+    if (!Object.hasOwn(titles, tabName)) tabName = 'dashboard';
     currentTab = tabName;
-    
-    // Cerrar sidebar en móvil al cambiar de sección
-    if(document.getElementById('sidebar').classList.contains('translate-x-0') && window.innerWidth < 768) {
-        toggleMobileSidebar();
-    }
-
-    // Ocultar todas las secciones
-    document.querySelectorAll('.tab-section').forEach(sec => sec.classList.add('hidden'));
-    
-    // Desactivar todos los links de navegación
-    document.querySelectorAll('.nav-link').forEach(link => {
-        link.classList.remove('bg-brand-700/50', 'text-white');
-        link.classList.add('text-brand-100', 'hover:bg-white/5');
+    if (window.innerWidth < 1024) toggleMobileSidebar(false);
+    document.querySelectorAll('.tab-section').forEach(section => {
+        const active = section.id === `section-${tabName}`;
+        section.classList.toggle('hidden', !active);
+        section.setAttribute('aria-hidden', String(!active));
     });
-    
-    // Mostrar sección seleccionada
-    document.getElementById('section-' + tabName).classList.remove('hidden');
-    
-    // Activar link seleccionado
-    const activeLink = document.getElementById('link-' + tabName);
-    if (activeLink) {
-        activeLink.classList.add('bg-brand-700/50', 'text-white');
-        activeLink.classList.remove('text-brand-100', 'hover:bg-white/5');
-    }
-    
-    // Títulos de Header
-    const titles = {
-        'dashboard': 'Panel de Control',
-        'pacientes': 'Gestión de Pacientes',
-        'citas': 'Control de Citas Médicas',
-        'reportes': 'Reportes de Morbilidad'
-    };
-    document.getElementById('headerTitle').textContent = titles[tabName] || 'Salud UNEFA';
-    
-    // Recargar sección correspondiente
-    if (tabName === 'pacientes') {
-        loadPacientes();
-    } else if (tabName === 'citas') {
-        loadCitas();
-    } else if (tabName === 'dashboard') {
+    document.querySelectorAll('.nav-link').forEach(link => {
+        const active = link.id === `link-${tabName}`;
+        link.classList.toggle('is-active', active);
+        if (active) link.setAttribute('aria-current', 'page');
+        else link.removeAttribute('aria-current');
+    });
+    const heading = document.getElementById('headerTitle');
+    if (heading) heading.textContent = titles[tabName];
+    document.title = `${titles[tabName]} · Salud UNEFA`;
+    if (updateHistory && location.hash !== `#${tabName}`) history.pushState(null, '', `#${tabName}`);
+    if (tabName === 'pacientes') loadPacientes();
+    else if (tabName === 'citas') loadCitas();
+    else if (tabName === 'dashboard') {
+        // Charts may have refreshed while this section was hidden; measure the visible canvas now.
+        categoryChartInstance?.resize();
+        historyChartInstance?.resize();
         loadStats();
     }
 }
-
-// Control de secciones colapsables (Acordeón)
 function toggleAccordion(id) {
-    document.querySelectorAll('[id^="acc-"]').forEach(item => {
-        item.classList.add('hidden');
-        const itemIcon = document.getElementById('icon-' + item.id);
-        if (itemIcon) itemIcon.classList.remove('rotate-180');
+    document.querySelectorAll('[id^="acc-"]').forEach(section => {
+        const open = section.id === id;
+        section.classList.toggle('hidden', !open);
+        document.getElementById(`icon-${section.id}`)?.classList.toggle('rotate-180', open);
+        document.querySelector(`[aria-controls="${section.id}"]`)?.setAttribute('aria-expanded', String(open));
     });
-    const el = document.getElementById(id);
-    const icon = document.getElementById('icon-' + id);
-    if (el) {
-        el.classList.remove('hidden');
-        if (icon) icon.classList.add('rotate-180');
-    }
 }
 
-// Carga de Categorías
+let categoriasPromise;
 async function loadCategorias() {
-    try {
-        let res = await fetch('api/get_categorias.php');
-        let json = await res.json();
-        if(json.success) {
-            const filterSelect = document.getElementById('filterCategoria');
-            const formSelect = document.getElementById('formCategoria');
-            const formCitaSelect = document.getElementById('citaCategoria');
-            
-            let options = '';
-            json.data.forEach(cat => {
-                options += `<option value="${cat.id}">${escapeHTML(cat.nombre)}</option>`;
-            });
-
-            if (filterSelect) filterSelect.innerHTML = '<option value="">Todas las Categorías</option>' + options;
-            if (formSelect) formSelect.innerHTML = '<option value="">Seleccione...</option>' + options;
-            if (formCitaSelect) formCitaSelect.innerHTML = '<option value="">Seleccione...</option>' + options;
-        }
-    } catch(e) { console.error('Error cats:', e); }
+    if (categoriasPromise) return categoriasPromise;
+    categoriasPromise = (async () => {
+        try {
+            const json = await apiRequest('api/get_categorias.php');
+            for (const id of ['filterCategoria', 'formCategoria', 'citaCategoria']) {
+                const select = document.getElementById(id);
+                if (!select) continue;
+                const value = select.value;
+                select.replaceChildren(new Option(id === 'filterCategoria' ? 'Todas las categorías' : 'Seleccione una categoría', ''));
+                json.data.forEach(category => select.add(new Option(category.nombre, String(category.id))));
+                select.value = value;
+            }
+            setVisible(document.getElementById('categoriasError'), false);
+        } catch (error) {
+            showBlockError('categoriasError', document.getElementById('registroForm'), 'No se pudieron cargar las categorías.', loadCategorias);
+            showNotification('error', error.message);
+        } finally { categoriasPromise = null; }
+    })();
+    return categoriasPromise;
 }
-
-// Modal Lógica - Consulta
-const modal = document.getElementById('patientModal');
-const modalContent = document.getElementById('modalContent');
-
 function openModal(cedula = '', categoriaId = '', nombres = '', apellidos = '') {
-    const modalEl = document.getElementById('patientModal');
-    const modalContentEl = document.getElementById('modalContent');
-    if (!modalEl || !modalContentEl) return;
-    
-    modalEl.classList.remove('hidden');
-    void modalContentEl.offsetWidth; // reflow
-    modalContentEl.classList.remove('modal-enter');
-    modalContentEl.classList.add('modal-enter-active');
-    
-    // Asegurar que el flag solo_paciente inicie en 0
-    const formSoloPaciente = document.getElementById('formSoloPaciente');
-    if (formSoloPaciente) {
-        formSoloPaciente.value = '0';
-    }
-
-    // Si viene pre-rellenado (desde el drawer o botón de fila)
-    if (cedula) {
-        document.getElementById('formCedula').value = cedula;
-        document.getElementById('formCategoria').value = categoriaId;
-        document.getElementById('formNombres').value = nombres;
-        document.getElementById('formApellidos').value = apellidos;
-        
-        // Cargar el historial completo del paciente para rellenar campos clínicos
-        buscarPacientePorCedula(cedula);
-    }
-    
-    // Colocar por defecto la fecha de hoy en fecha de circunstancia
-    const today = new Date().toISOString().split('T')[0];
-    const fechaCircunstanciaEl = document.getElementById('formFechaCircunstancia');
-    if (fechaCircunstanciaEl) {
-        fechaCircunstanciaEl.value = today;
-    }
-
-    // Por defecto, abrir la primera pestaña (identificación) del acordeón
+    const form = document.getElementById('registroForm');
+    if (!form) return;
+    form.reset();
+    form.noValidate = true;
+    delete form.dataset.patientCedula;
+    resetPatientLookupState();
+    clearInlineErrors(form.id);
+    document.getElementById('formSoloPaciente').value = '0';
+    document.getElementById('formFechaCircunstancia').value = localDate();
+    document.getElementById('formCedula').value = cedula;
+    document.getElementById('formCategoria').value = categoriaId || '';
+    document.getElementById('formNombres').value = nombres;
+    document.getElementById('formApellidos').value = apellidos;
+    setVisible(document.getElementById('fileError'), false);
+    setVisible(document.getElementById('fileName'), false);
+    setVisible(document.getElementById('patientLookupStatus'), false);
     toggleAccordion('acc-paciente');
-    const formCompromisoTatuajes = document.getElementById('formCompromisoTatuajes');
-    if (formCompromisoTatuajes) {
-        formCompromisoTatuajes.value = 'Yo me comprometo con la institución a no realizarme tatuajes durante el desarrollo de mi carrera.';
-    }
+    openSurface('patientModal', 'modalContent', 'patientModalTitle');
+    if (cedula) buscarPacientePorCedula(cedula);
 }
-
 function closeModal() {
-    const modalEl = document.getElementById('patientModal');
-    const modalContentEl = document.getElementById('modalContent');
-    if (!modalEl || !modalContentEl) return;
-
-    modalContentEl.classList.remove('modal-enter-active');
-    modalContentEl.classList.add('modal-leave-active');
-    setTimeout(() => {
-        modalEl.classList.add('hidden');
-        modalContentEl.classList.remove('modal-leave-active');
-        modalContentEl.classList.add('modal-enter');
-        
-        const form = document.getElementById('registroForm');
-        if (form) {
-            form.removeAttribute('novalidate');
-            form.reset();
-        }
-        
-        document.getElementById('fileError').classList.add('hidden');
-        document.getElementById('fileName').classList.add('hidden');
-    }, 200);
+    if (document.getElementById('registroForm')?.dataset.saving === 'true') return;
+    activeRequests.get('patientLookup')?.abort();
+    closeSurface('patientModal', 'modalContent');
 }
-
-// Modal Lógica - Cita
-const citaModal = document.getElementById('citaModal');
-const citaModalContent = document.getElementById('citaModalContent');
-
 function openCitaModal(pacienteId = 0, cedula = '', nombreCompleto = '') {
-    const citaModalEl = document.getElementById('citaModal');
-    const citaModalContentEl = document.getElementById('citaModalContent');
-    if (!citaModalEl || !citaModalContentEl) return;
-
-    citaModalEl.classList.remove('hidden');
-    void citaModalContentEl.offsetWidth; // reflow
-    citaModalContentEl.classList.remove('modal-enter');
-    citaModalContentEl.classList.add('modal-enter-active');
-    
-    if (pacienteId > 0) {
-        document.getElementById('citaPacienteId').value = pacienteId;
-        document.getElementById('citaCedula').value = cedula;
-        document.getElementById('citaPacienteNombreText').textContent = nombreCompleto;
-        document.getElementById('citaPacienteInfo').classList.remove('hidden');
-        
-        // Desactivar requeridos del vuelo
-        document.getElementById('citaNombres').required = false;
-        document.getElementById('citaApellidos').required = false;
-        document.getElementById('citaCategoria').required = false;
-    }
+    const form = document.getElementById('citaForm');
+    if (!form) return;
+    form.reset();
+    form.noValidate = true;
+    delete form.dataset.lookupCedula;
+    setVisible(document.getElementById('citaLookupStatus'), false);
+    clearInlineErrors(form.id);
+    document.getElementById('citaPacienteId').value = Number(pacienteId) || 0;
+    document.getElementById('citaCedula').value = cedula;
+    document.getElementById('citaPacienteNombreText').textContent = nombreCompleto;
+    setVisible(document.getElementById('citaPacienteInfo'), Number(pacienteId) > 0);
+    setVisible(document.getElementById('citaNuevoPacienteCampos'), false);
+    ['citaNombres', 'citaApellidos', 'citaCategoria'].forEach(id => { document.getElementById(id).required = false; });
+    const fecha = form.elements.namedItem('fecha_cita');
+    if (fecha) fecha.min = localDateTime(new Date(Date.now() + 60000));
+    openSurface('citaModal', 'citaModalContent', 'citaModalTitle');
 }
-
 function closeCitaModal() {
-    const citaModalEl = document.getElementById('citaModal');
-    const citaModalContentEl = document.getElementById('citaModalContent');
-    if (!citaModalEl || !citaModalContentEl) return;
-
-    citaModalContentEl.classList.remove('modal-enter-active');
-    citaModalContentEl.classList.add('modal-leave-active');
-    setTimeout(() => {
-        citaModalEl.classList.add('hidden');
-        citaModalContentEl.classList.remove('modal-leave-active');
-        citaModalContentEl.classList.add('modal-enter');
-        document.getElementById('citaForm').reset();
-        document.getElementById('citaPacienteInfo').classList.add('hidden');
-        document.getElementById('citaNuevoPacienteCampos').classList.add('hidden');
-        document.getElementById('citaPacienteId').value = 0;
-    }, 200);
+    if (document.getElementById('citaForm')?.dataset.saving === 'true') return;
+    activeRequests.get('citaLookup')?.abort();
+    closeSurface('citaModal', 'citaModalContent');
 }
-
 function closeDrawer() {
-    const drawer = document.getElementById('patientDrawer');
-    const content = document.getElementById('drawerContent');
-    if (!drawer || !content) return;
-
-    content.classList.add('translate-x-full');
-    setTimeout(() => {
-        drawer.classList.add('hidden');
-    }, 300);
+    activeRequests.get('patientDetails')?.abort();
+    closeSurface('patientDrawer', 'drawerContent');
 }
-
-// Validación de Archivos (MIME/size)
 function validarArchivo(input) {
-    const fileError = document.getElementById('fileError');
-    const fileName = document.getElementById('fileName');
-    const maxSize = 10 * 1024 * 1024;
-    const validTypes = ['image/jpeg', 'image/png', 'application/pdf'];
-
-    if (!fileError || !fileName) return;
-
-    fileError.classList.add('hidden');
-    fileName.classList.add('hidden');
-
-    if (input.files && input.files[0]) {
-        const file = input.files[0];
-        if (file.size > maxSize) {
-            fileError.textContent = "El archivo excede el tamaño máximo permitido de 10MB.";
-            fileError.classList.remove('hidden');
-            input.value = "";
-            return;
-        }
-        if (!validTypes.includes(file.type)) {
-            fileError.textContent = "Formato no válido. Solo se permiten archivos JPG, PNG o PDF.";
-            fileError.classList.remove('hidden');
-            input.value = "";
-            return;
-        }
-        fileName.textContent = "Archivo seleccionado: " + file.name;
-        fileName.classList.remove('hidden');
+    const error = document.getElementById('fileError');
+    const name = document.getElementById('fileName');
+    setVisible(error, false);
+    setVisible(name, false);
+    input.setCustomValidity('');
+    const file = input.files?.[0];
+    if (!file) return true;
+    let message = '';
+    if (file.size > 10 * 1024 * 1024) message = 'El archivo supera el máximo de 10 MB.';
+    else if (!['image/jpeg', 'image/png', 'application/pdf'].includes(file.type)) message = 'Seleccione un archivo JPG, PNG o PDF.';
+    if (message) {
+        error.textContent = message;
+        setVisible(error, true);
+        input.value = '';
+        return false;
     }
+    name.textContent = `Archivo seleccionado: ${file.name}`;
+    setVisible(name, true);
+    return true;
+}
+async function refreshClinicalViews() {
+    const tasks = [loadStats(), loadPacientes()];
+    if (currentTab === 'citas') tasks.push(loadCitas());
+    await Promise.allSettled(tasks);
+    if (typeof invalidateMorbilidad === 'function') invalidateMorbilidad();
 }
 
-// Carga inicial al cargar el DOM
-document.addEventListener('DOMContentLoaded', () => {
-    loadStats();
-    loadCategorias();
-    loadPacientes(); // Cargar pacientes en cache global
+document.addEventListener('input', event => {
+    const input = event.target;
+    if (!(input instanceof HTMLInputElement || input instanceof HTMLTextAreaElement)) return;
+    if (input.name === 'cedula') input.value = normalizeCedula(input.value);
+    if (input.name === 'vital_ta') {
+        let value = input.value.replace(/[^\d/]/g, '');
+        if (value.length === 5 && !value.includes('/')) value = `${value.slice(0, 3)}/${value.slice(3)}`;
+        input.value = value;
+    }
+    if (input.getAttribute('aria-invalid') === 'true') {
+        document.getElementById(input.getAttribute('aria-describedby'))?.remove();
+        input.removeAttribute('aria-invalid');
+        input.removeAttribute('aria-describedby');
+    }
+});
+document.addEventListener('keydown', event => {
+    if (document.querySelector('.swal2-container .swal2-popup:not(.swal2-toast)')) return;
+    const open = ['citaModal', 'patientModal', 'patientDrawer'].find(id => {
+        const element = document.getElementById(id);
+        return element && !element.classList.contains('hidden');
+    });
+    if (open) {
+        if (event.key === 'Escape') {
+            event.preventDefault();
+            ({ citaModal: closeCitaModal, patientModal: closeModal, patientDrawer: closeDrawer }[open])();
+        }
+        if (event.key === 'Tab') {
+            const elements = [...document.getElementById(open).querySelectorAll('button:not(:disabled), a[href], input:not([type="hidden"]):not(:disabled), select:not(:disabled), textarea:not(:disabled), [tabindex="0"]')].filter(element => element.getClientRects().length);
+            const first = elements[0], last = elements[elements.length - 1];
+            if (event.shiftKey && document.activeElement === first) { event.preventDefault(); last?.focus(); }
+            else if (!event.shiftKey && document.activeElement === last) { event.preventDefault(); first?.focus(); }
+        }
+    } else if (event.key === 'Escape') toggleMobileSidebar(false);
+});
+window.addEventListener('popstate', () => switchTab(location.hash.slice(1), false));
+window.addEventListener('hashchange', () => { if (location.hash.slice(1) !== currentTab) switchTab(location.hash.slice(1), false); });
+window.addEventListener('resize', () => { if (window.innerWidth >= 1024) toggleMobileSidebar(false); });
+document.addEventListener('DOMContentLoaded', async () => {
+    document.querySelectorAll('form').forEach(form => {
+        form.querySelectorAll('input:not([type="hidden"]),select,textarea').forEach((input, index) => {
+            if (!input.id) input.id = `${form.id}-field-${index}`;
+            const label = input.parentElement.querySelector('label');
+            if (label && !label.htmlFor) label.htmlFor = input.id;
+        });
+    });
+    document.querySelectorAll('[onclick^="toggleAccordion"]').forEach(button => {
+        const section = button.nextElementSibling;
+        if (section) { button.setAttribute('aria-controls', section.id); button.setAttribute('aria-expanded', String(!section.classList.contains('hidden'))); }
+    });
+    await loadCategorias();
+    switchTab(location.hash.slice(1) || 'dashboard', false);
 });

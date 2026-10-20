@@ -1,298 +1,199 @@
-// LÓGICA DE CITAS (TAB 3)
+let citasRequestVersion = 0;
+let citaLookupVersion = 0;
+const updatingAppointments = new Set();
+
+function appointmentStatus(value) {
+    const status = { Pendiente: 'pending', Completada: 'completed', Cancelada: 'cancelled' }[value] || 'neutral';
+    return `<span class="status-badge status-${status}">${escapeHTML(value || 'Sin estado')}</span>`;
+}
 async function loadCitas() {
+    const version = ++citasRequestVersion;
     const loader = document.getElementById('citasTableLoader');
-    const tableWrap = document.getElementById('citasTableWrap');
-    const cardsWrap = document.getElementById('citasTableBodyCards');
-    if (loader) loader.style.display = 'flex';
-    if (tableWrap) tableWrap.style.display = 'none';
-    if (cardsWrap) cardsWrap.style.display = 'none';
+    const table = document.getElementById('citasTableWrap');
+    const cards = document.getElementById('citasTableBodyCards');
+    setVisible(document.getElementById('citasError'), false);
+    setVisible(document.getElementById('citasEmptyState'), false);
+    setVisible(loader, true, 'flex');
+    setVisible(table, false);
+    setVisible(cards, false);
+    document.getElementById('section-citas')?.setAttribute('aria-busy', 'true');
     try {
-        const estadoEl = document.getElementById('filterCitasEstado');
-        const estado = estadoEl ? estadoEl.value : 'Pendiente';
-        let res = await fetch(`api/get_citas.php?estado=${estado}`);
-        let json = await res.json();
-        if(json.success) {
-            citasList = json.data;
-            renderCitasTable();
-        }
-    } catch(e) {
-        console.error('Error citas:', e);
+        const state = document.getElementById('filterCitasEstado')?.value || '';
+        const json = await apiRequest(`api/get_citas.php?estado=${encodeURIComponent(state)}`, {}, 'citas');
+        if (version !== citasRequestVersion) return;
+        citasList = Array.isArray(json.data) ? json.data : [];
+        renderCitasTable();
+        setVisible(table, true);
+        setVisible(cards, true);
+    } catch (error) {
+        if (error.name !== 'AbortError') showBlockError('citasError', loader, error.message, loadCitas);
     } finally {
-        if (loader) loader.style.display = 'none';
-        if (tableWrap) tableWrap.style.display = '';
-        if (cardsWrap) cardsWrap.style.display = '';
+        if (version === citasRequestVersion) {
+            setVisible(loader, false);
+            document.getElementById('section-citas')?.setAttribute('aria-busy', 'false');
+        }
     }
 }
-
-// Renderizado de Citas Adaptado a Pantallas Móviles
+function appointmentActions(appointment) {
+    const actions = document.createElement('div');
+    actions.className = 'record-actions';
+    if (appointment.estado === 'Pendiente') {
+        for (const [label, icon, status] of [['Completar', 'ph-check', 'Completada'], ['Cancelar', 'ph-x', 'Cancelada']]) {
+            const button = textAction(label, icon, () => cambiarEstadoCita(appointment.id, status));
+            button.dataset.appointmentId = String(appointment.id);
+            button.disabled = updatingAppointments.has(Number(appointment.id));
+            actions.append(button);
+        }
+    }
+    return actions;
+}
 function renderCitasTable() {
-    const tbody = document.getElementById('citasTableBody');
-    const emptyState = document.getElementById('citasEmptyState');
-    if (!tbody) return;
-
-    const filterCitasPacienteEl = document.getElementById('filterCitasPaciente');
-    const query = filterCitasPacienteEl ? filterCitasPacienteEl.value.toLowerCase() : '';
-
-    tbody.innerHTML = '';
-    let visibleCount = 0;
-
-    const cardsContainer = document.getElementById('citasTableBodyCards');
-    if (cardsContainer) cardsContainer.innerHTML = '';
-
-    citasList.forEach(c => {
-        const pacienteNombre = `${c.nombres} ${c.apellidos}`.toLowerCase();
-        const cedulaMatch = c.cedula.toLowerCase().includes(query);
-        const nombreMatch = pacienteNombre.includes(query);
-
-        if (cedulaMatch || nombreMatch) {
-            visibleCount++;
-
-            let statusBadge = '';
-            let actionButtons = '';
-            let statusColor = '';
-
-            if (c.estado === 'Pendiente') {
-                statusBadge = '<span class="px-2.5 py-1 rounded-full text-xs font-semibold bg-amber-50 text-amber-600 border border-amber-200">Pendiente</span>';
-                statusColor = 'text-amber-600';
-                actionButtons = `
-                    <button onclick="cambiarEstadoCita(${c.id}, 'Completada')" class="p-1.5 hover:bg-emerald-50 text-slate-400 hover:text-emerald-600 rounded-lg transition" title="Marcar como Completada">
-                        <i class="ph ph-check-circle text-xl"></i>
-                    </button>
-                    <button onclick="cambiarEstadoCita(${c.id}, 'Cancelada')" class="p-1.5 hover:bg-rose-50 text-slate-400 hover:text-rose-600 rounded-lg transition" title="Cancelar Cita">
-                        <i class="ph ph-x-circle text-xl"></i>
-                    </button>
-                `;
-            } else if (c.estado === 'Completada') {
-                statusBadge = '<span class="px-2.5 py-1 rounded-full text-xs font-semibold bg-emerald-50 text-emerald-600 border border-emerald-200">Completada</span>';
-                statusColor = 'text-emerald-600';
-            } else {
-                statusBadge = '<span class="px-2.5 py-1 rounded-full text-xs font-semibold bg-rose-50 text-rose-600 border border-rose-200">Cancelada</span>';
-                statusColor = 'text-rose-500';
-            }
-
-            const parts = c.fecha_cita.split(/[\sT]/);
-            const fechaParte = parts[0];
-            const horaParte = parts[1] ? parts[1].substring(0, 5) : '';
-            const fullName = `${escapeHTML(c.nombres)} ${escapeHTML(c.apellidos)}`;
-
-            // ── FILA DE TABLA (visible solo en md+) ───────────────────
-            const row = document.createElement('tr');
-            row.className = 'hover:bg-slate-50/60 transition';
-            row.innerHTML = `
-                <td class="px-6 py-4 text-sm font-medium text-slate-700">
-                    <div class="font-semibold">${fechaParte}</div>
-                    <div class="text-xs text-slate-400">${horaParte}</div>
-                </td>
-                <td class="px-6 py-4 font-semibold text-slate-700 text-sm">${escapeHTML(c.cedula)}</td>
-                <td class="px-6 py-4 font-medium text-slate-800 text-sm">${fullName}</td>
-                <td class="px-6 py-4 hidden lg:table-cell">
-                    <span class="px-2 py-1 rounded-md text-xs font-semibold bg-slate-100 text-slate-600">${escapeHTML(c.categoria)}</span>
-                </td>
-                <td class="px-6 py-4">${statusBadge}</td>
-                <td class="px-6 py-4 text-right">
-                    <div class="flex justify-end gap-1.5">
-                        ${actionButtons}
-                    </div>
-                </td>
-            `;
-            tbody.appendChild(row);
-
-            // ── TARJETA MÓVIL (visible solo en < md) ─────────────────
-            if (cardsContainer) {
-                const card = document.createElement('div');
-                card.className = 'glass-panel p-5 rounded-2xl border border-slate-100 bg-white/85 hover:bg-white transition-all duration-300 flex flex-col justify-between shadow-sm hover:shadow-md gap-4 relative';
-                
-                // Formato amigable de fecha para el badge
-                const meses = ['Ene', 'Feb', 'Mar', 'Abr', 'May', 'Jun', 'Jul', 'Ago', 'Sep', 'Oct', 'Nov', 'Dic'];
-                const mesNum = parseInt(fechaParte.split('-')[1]) - 1;
-                const mesTexto = meses[mesNum] || '';
-                const diaTexto = fechaParte.split('-')[2] || '';
-
-                card.innerHTML = `
-                    <div class="flex items-start justify-between gap-3">
-                        <div class="flex items-center gap-3 min-w-0">
-                            <div class="w-11 h-11 rounded-xl bg-amber-50 text-amber-600 flex flex-col items-center justify-center shrink-0 border border-amber-100 shadow-sm leading-none">
-                                <span class="text-xs font-bold">${diaTexto}</span>
-                                <span class="text-[9px] font-semibold uppercase text-amber-500 mt-0.5">${mesTexto}</span>
-                            </div>
-                            <div class="min-w-0">
-                                <h4 class="font-bold text-slate-800 text-sm sm:text-base truncate leading-tight">${fullName}</h4>
-                                <p class="text-xs text-slate-500 font-semibold mt-1 flex items-center gap-1">
-                                    <i class="ph ph-identification-card text-slate-400 text-sm"></i> ${escapeHTML(c.cedula)}
-                                </p>
-                            </div>
-                        </div>
-                        <div class="shrink-0">${statusBadge}</div>
-                    </div>
-                    
-                    <div class="border-t border-slate-100/70 pt-3 flex flex-wrap gap-4 text-[11px] text-slate-500">
-                        <div class="flex items-center gap-1.5">
-                            <i class="ph ph-clock text-xs text-slate-400"></i>
-                            <span>Hora de cita:</span>
-                            <span class="font-semibold text-slate-700">${horaParte}</span>
-                        </div>
-                        <div class="flex items-center gap-1.5">
-                            <i class="ph ph-tag text-xs text-slate-400"></i>
-                            <span>Categoría:</span>
-                            <span class="font-semibold text-slate-700">${escapeHTML(c.categoria)}</span>
-                        </div>
-                    </div>
-                    
-                    ${actionButtons ? `
-                    <div class="grid grid-cols-2 gap-2 mt-1 pt-1" onclick="event.stopPropagation()">
-                        <button onclick="cambiarEstadoCita(${c.id}, 'Completada')" class="flex items-center justify-center gap-1.5 py-2.5 px-3 bg-emerald-50 hover:bg-emerald-100 text-emerald-600 text-xs font-bold rounded-xl border border-emerald-100 transition shadow-sm min-h-[44px]">
-                            <i class="ph ph-check-circle text-base"></i> Completar
-                        </button>
-                        <button onclick="cambiarEstadoCita(${c.id}, 'Cancelada')" class="flex items-center justify-center gap-1.5 py-2.5 px-3 bg-rose-50 hover:bg-rose-100 text-rose-600 text-xs font-bold rounded-xl border border-rose-100 transition shadow-sm min-h-[44px]">
-                            <i class="ph ph-x-circle text-base"></i> Cancelar
-                        </button>
-                    </div>
-                    ` : ''}
-                `;
-                cardsContainer.appendChild(card);
-            }
-        }
+    const body = document.getElementById('citasTableBody');
+    const cards = document.getElementById('citasTableBodyCards');
+    if (!body) return;
+    const query = normalizeSearch(document.getElementById('filterCitasPaciente')?.value);
+    const appointments = citasList.filter(appointment => normalizeSearch(`${appointment.cedula} ${appointment.nombres} ${appointment.apellidos}`).includes(query));
+    body.replaceChildren();
+    cards?.replaceChildren();
+    appointments.forEach(appointment => {
+        const fullName = `${appointment.nombres ?? ''} ${appointment.apellidos ?? ''}`.trim();
+        const date = formatDate(appointment.fecha_cita, true);
+        const row = document.createElement('tr');
+        row.innerHTML = `<td class="tabular-nums">${escapeHTML(date)}</td><td>${escapeHTML(appointment.cedula)}</td><td>${escapeHTML(fullName)}</td><td>${escapeHTML(appointment.categoria)}</td><td>${appointmentStatus(appointment.estado)}</td><td></td>`;
+        row.lastElementChild.append(appointmentActions(appointment));
+        body.append(row);
+        const card = document.createElement('article');
+        card.className = 'record-card';
+        card.innerHTML = `<div class="record-identity"><div><h3>${escapeHTML(fullName)}</h3><p>${escapeHTML(appointment.cedula)}</p></div>${appointmentStatus(appointment.estado)}</div><p class="appointment-date">${escapeHTML(date)}</p><p class="record-meta">${escapeHTML(appointment.categoria)}</p>`;
+        if (appointment.estado === 'Pendiente') card.append(appointmentActions(appointment));
+        cards?.append(card);
     });
-
-
-    if (emptyState) {
-        if (visibleCount === 0) {
-            emptyState.classList.remove('hidden');
-            emptyState.style.display = 'flex';
-        } else {
-            emptyState.classList.add('hidden');
-            emptyState.style.display = 'none';
-        }
+    const count = document.getElementById('citasCount');
+    if (count) count.textContent = `${appointments.length} ${appointments.length === 1 ? 'cita' : 'citas'}`;
+    const empty = document.getElementById('citasEmptyState');
+    setVisible(empty, !appointments.length, 'flex');
+    if (empty) {
+        const title = empty.querySelector('h3, h4');
+        const copy = empty.querySelector('p');
+        if (title) title.textContent = query ? 'Sin coincidencias' : 'No hay citas en esta selección';
+        if (copy) copy.textContent = query ? 'Pruebe otro nombre o cédula.' : 'Cambie el estado del filtro o programe una cita.';
     }
 }
 
-// Cambiar Estado Cita
 async function cambiarEstadoCita(citaId, nuevoEstado) {
-    const result = await Swal.fire({
-        title: '¿Está seguro?',
-        text: `Se cambiará el estado de la cita a "${nuevoEstado}".`,
-        icon: 'question',
-        showCancelButton: true,
-        confirmButtonColor: '#3b82f6',
-        cancelButtonColor: '#94a3b8',
-        confirmButtonText: 'Sí, cambiar',
-        cancelButtonText: 'Cancelar'
-    });
+    const id = Number(citaId);
+    if (updatingAppointments.has(id) || !['Completada', 'Cancelada'].includes(nuevoEstado)) return;
+    updatingAppointments.add(id);
+    const buttons = [...document.querySelectorAll('[data-appointment-id]')].filter(button => button.dataset.appointmentId === String(id));
+    buttons.forEach(button => { button.disabled = true; });
+    try {
+        const confirmed = typeof Swal !== 'undefined' ? (await Swal.fire({
+            titleText: nuevoEstado === 'Completada' ? 'Completar esta cita' : 'Cancelar esta cita',
+            text: nuevoEstado === 'Completada' ? 'La cita quedará registrada como completada.' : 'La cita quedará registrada como cancelada.',
+            icon: 'question', showCancelButton: true, confirmButtonColor: '#202a30', cancelButtonColor: '#667078',
+            confirmButtonText: nuevoEstado === 'Completada' ? 'Completar cita' : 'Cancelar cita', cancelButtonText: 'Volver'
+        })).isConfirmed : window.confirm(`¿Cambiar la cita a ${nuevoEstado.toLowerCase()}?`);
+        if (!confirmed) return;
+        const data = new FormData();
+        data.append('cita_id', id);
+        data.append('estado', nuevoEstado);
+        const json = await apiRequest('api/update_cita_estado.php', { method: 'POST', body: data });
+        showNotification('success', json.message);
+        await Promise.allSettled([loadCitas(), loadStats()]);
+    } catch (error) { showNotification('error', error.message); }
+    finally {
+        updatingAppointments.delete(id);
+        document.querySelectorAll('[data-appointment-id]').forEach(button => {
+            if (button.dataset.appointmentId === String(id)) button.disabled = false;
+        });
+    }
+}
 
-    if (result.isConfirmed) {
-        try {
-            const formData = new FormData();
-            formData.append('cita_id', citaId);
-            formData.append('estado', nuevoEstado);
-            
-            let res = await fetch('api/update_cita_estado.php', {
-                method: 'POST',
-                body: formData
-            });
-            let json = await res.json();
-            
-            if (json.success) {
-                showNotification('success', json.message);
-                loadCitas();
-            } else {
-                showNotification('error', json.message);
-            }
-        } catch(e) {
-            showNotification('error', 'No se pudo actualizar la cita.');
+function setCitaLookupStatus(message) {
+    let status = document.getElementById('citaLookupStatus');
+    if (!status) {
+        status = document.createElement('p');
+        status.id = 'citaLookupStatus';
+        status.className = 'field-help';
+        status.setAttribute('role', 'status');
+        document.getElementById('citaCedula')?.insertAdjacentElement('afterend', status);
+    }
+    status.textContent = message;
+    setVisible(status, Boolean(message));
+}
+function setCitaPatient(patient) {
+    document.getElementById('citaPacienteId').value = patient?.id || 0;
+    document.getElementById('citaPacienteNombreText').textContent = patient ? `${patient.nombres} ${patient.apellidos} · ${patient.categoria}` : '';
+    setVisible(document.getElementById('citaPacienteInfo'), Boolean(patient));
+    setVisible(document.getElementById('citaNuevoPacienteCampos'), !patient);
+    ['citaNombres', 'citaApellidos', 'citaCategoria'].forEach(id => { document.getElementById(id).required = !patient; });
+}
+async function buscarPacienteParaCita(cedula) {
+    const form = document.getElementById('citaForm');
+    const normalized = normalizeCedula(cedula);
+    if (form.dataset.lookupCedula === normalized) return true;
+    const version = ++citaLookupVersion;
+    activeRequests.get('citaLookup')?.abort();
+    document.getElementById('citaPacienteId').value = '0';
+    if (!/^[VEJGCPN]-\d{1,18}$/.test(normalized)) { setCitaLookupStatus('Ingrese una cédula válida, por ejemplo V-12345678.'); return false; }
+    setCitaLookupStatus('Buscando paciente…');
+    try {
+        const json = await apiRequest(`api/get_paciente.php?cedula=${encodeURIComponent(normalized)}`, {}, 'citaLookup');
+        if (version !== citaLookupVersion || normalizeCedula(document.getElementById('citaCedula').value) !== normalized) return false;
+        setCitaPatient(json.data);
+        form.dataset.lookupCedula = normalized;
+        setCitaLookupStatus('');
+        return true;
+    } catch (error) {
+        if (error.name === 'AbortError' || version !== citaLookupVersion) return false;
+        if (error.status === 404) {
+            setCitaPatient(null);
+            form.dataset.lookupCedula = normalized;
+            setCitaLookupStatus('El paciente se registrará junto con la cita.');
+            return true;
         }
+        setCitaLookupStatus(error.message);
+        return false;
     }
 }
-
-// Búsqueda inteligente para el formulario de agendar citas
-function buscarPacienteParaCita(cedula) {
-    if (!cedula) return;
-    const cedulaLimpia = cedula.replace(/\s+/g, '').toUpperCase();
-    const paciente = pacientesList.find(p => p.cedula.replace(/\s+/g, '').toUpperCase() === cedulaLimpia);
-    
-    const infoBox = document.getElementById('citaPacienteInfo');
-    const nuevoBox = document.getElementById('citaNuevoPacienteCampos');
-    if (!infoBox || !nuevoBox) return;
-    
-    if (paciente) {
-        document.getElementById('citaPacienteId').value = paciente.id;
-        document.getElementById('citaPacienteNombreText').textContent = `${paciente.nombres} ${paciente.apellidos} (${paciente.categoria})`;
-        infoBox.classList.remove('hidden');
-        nuevoBox.classList.add('hidden');
-        
-        // Desactivar requeridos del vuelo
-        document.getElementById('citaNombres').required = false;
-        document.getElementById('citaApellidos').required = false;
-        document.getElementById('citaCategoria').required = false;
-    } else {
-        document.getElementById('citaPacienteId').value = 0;
-        infoBox.classList.add('hidden');
-        nuevoBox.classList.remove('hidden');
-        
-        // Activar requeridos del vuelo
-        document.getElementById('citaNombres').required = true;
-        document.getElementById('citaApellidos').required = true;
-        document.getElementById('citaCategoria').required = true;
-    }
-}
-
-// Envío de Formulario Programar Cita
 const citaForm = document.getElementById('citaForm');
-if (citaForm) {
-    citaForm.addEventListener('submit', async function(e) {
-        e.preventDefault();
-        const btn = document.getElementById('btnGuardarCita');
-        if (!btn) return;
-        
-        const originalText = btn.innerHTML;
-        btn.innerHTML = '<i class="ph ph-spinner animate-spin"></i> Guardando...';
-        btn.disabled = true;
-
-        const formData = new FormData(this);
-
-        try {
-            let res = await fetch('api/save_cita.php', {
-                method: 'POST',
-                body: formData
-            });
-            let json = await res.json();
-            
-            if (json.success) {
-                showNotification('success', json.message);
-                closeCitaModal();
-                // Recargar stats y tabla
-                loadStats();
-                if(currentTab === 'citas') loadCitas();
-            } else {
-                if (json.errors && Object.keys(json.errors).length > 0) {
-                    if (typeof handleInlineErrors === 'function') {
-                        handleInlineErrors(json.errors, 'citaForm');
-                    }
-                    if (typeof showValidationErrors === 'function') {
-                        showValidationErrors(json.errors);
-                    } else {
-                        showNotification('error', json.message);
-                    }
-                } else {
-                    showNotification('error', json.message);
-                }
-            }
-        } catch (error) {
-            console.error(error);
-            showNotification('error', 'Error al conectarse con el servidor para agendar.');
-        } finally {
-            btn.innerHTML = originalText;
-            btn.disabled = false;
+citaForm?.addEventListener('submit', async function (event) {
+    event.preventDefault();
+    if (this.dataset.saving === 'true') return;
+    clearInlineErrors(this.id);
+    const cedula = document.getElementById('citaCedula');
+    if (!cedula.checkValidity()) { cedula.reportValidity(); return; }
+    const button = document.getElementById('btnGuardarCita');
+    const original = button.innerHTML;
+    setFormBusy(this, true);
+    button.textContent = 'Verificando…';
+    try {
+        if (!(await buscarPacienteParaCita(cedula.value)) || !validateForm(this)) return;
+        const fecha = this.elements.namedItem('fecha_cita');
+        if (fecha.value <= localDateTime()) {
+            handleInlineErrors({ fecha_cita: 'Seleccione una fecha y hora posteriores a la actual.' }, this.id);
+            return;
         }
-    });
-}
-
-// Filtros Citas
-const filterCitasPaciente = document.getElementById('filterCitasPaciente');
-if (filterCitasPaciente) {
-    filterCitasPaciente.addEventListener('input', renderCitasTable);
-}
-
-const filterCitasEstado = document.getElementById('filterCitasEstado');
-if (filterCitasEstado) {
-    filterCitasEstado.addEventListener('change', loadCitas);
-}
+        button.textContent = 'Programando…';
+        const data = new FormData(this);
+        if (Number(data.get('paciente_id')) <= 0) data.delete('paciente_id');
+        const json = await apiRequest('api/save_cita.php', { method: 'POST', body: data });
+        setFormBusy(this, false);
+        closeCitaModal();
+        showNotification('success', json.message);
+        await refreshClinicalViews();
+    } catch (error) { showFormError(error, this.id); }
+    finally { setFormBusy(this, false); button.innerHTML = original; }
+});
+document.getElementById('citaCedula')?.addEventListener('input', () => {
+    citaLookupVersion++;
+    activeRequests.get('citaLookup')?.abort();
+    delete citaForm.dataset.lookupCedula;
+    document.getElementById('citaPacienteId').value = '0';
+    setVisible(document.getElementById('citaPacienteInfo'), false);
+    setVisible(document.getElementById('citaNuevoPacienteCampos'), false);
+    ['citaNombres', 'citaApellidos', 'citaCategoria'].forEach(id => { document.getElementById(id).value = ''; document.getElementById(id).required = false; });
+    setCitaLookupStatus('');
+});
+document.getElementById('filterCitasPaciente')?.addEventListener('input', debounce(renderCitasTable));
+document.getElementById('filterCitasEstado')?.addEventListener('change', loadCitas);

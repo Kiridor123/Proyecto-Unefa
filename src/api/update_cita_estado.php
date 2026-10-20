@@ -1,50 +1,32 @@
 <?php
-require_once '../config/Database.php';
+declare(strict_types=1);
+require_once __DIR__ . '/../config/bootstrap.php';
 
-header('Content-Type: application/json');
-
-if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
-    echo json_encode(['success' => false, 'message' => 'Método no permitido.']);
-    exit;
-}
-
+api_method('POST');
+$id = api_id($_POST['cita_id'] ?? null, 'cita_id');
+$errors = [];
+$status = Config\Validation::text($_POST, 'estado', 20, $errors, true);
+if (!in_array($status, ['Pendiente', 'Completada', 'Cancelada'], true)) $errors['estado'] = 'Seleccione un estado válido.';
+api_validate($errors);
+$db = api_db();
 try {
-    $db = Config\Database::getInstance()->getConnection();
-    
-    $cita_id = isset($_POST['cita_id']) ? (int)$_POST['cita_id'] : 0;
-    $estado = isset($_POST['estado']) ? trim($_POST['estado']) : '';
-    
-    if ($cita_id <= 0) {
-        throw new Exception("ID de cita no válido.");
-    }
-    
-    $estados_permitidos = ['Pendiente', 'Completada', 'Cancelada'];
-    if (!in_array($estado, $estados_permitidos)) {
-        throw new Exception("Estado de cita no válido.");
-    }
-
-    // Verificar el estado actual
-    $stmtCita = $db->prepare("SELECT estado FROM citas WHERE id = ?");
-    $stmtCita->execute([$cita_id]);
-    $cita = $stmtCita->fetch();
-
-    if (!$cita) {
-        throw new Exception("La cita no existe.");
-    }
-
-    $estado_actual = $cita['estado'];
-
-    // TODO: Cuando exista un sistema de autenticación, saltar esta validación si el usuario es 'admin'.
-    // if (!isAdmin()) { ... }
-    if (($estado_actual === 'Cancelada' || $estado_actual === 'Completada') && $estado === 'Pendiente') {
-        throw new Exception("Solo un administrador puede volver a poner como Pendiente una cita que ya fue Cancelada o Completada.");
-    }
-    
-    $stmt = $db->prepare("UPDATE citas SET estado = ? WHERE id = ?");
-    $stmt->execute([$estado, $cita_id]);
-    
-    echo json_encode(['success' => true, 'message' => 'Estado de la cita actualizado correctamente.']);
-    
-} catch (Exception $e) {
-    echo json_encode(['success' => false, 'message' => $e->getMessage()]);
+    $db->beginTransaction();
+    $statement = $db->prepare('SELECT paciente_id FROM citas WHERE id = ?');
+    $statement->execute([$id]);
+    $patientId = $statement->fetchColumn();
+    if (!$patientId) throw new ApiException('La cita no existe.', 404);
+    // Use the same lock order as registration and scheduling.
+    $statement = $db->prepare('SELECT id FROM pacientes WHERE id = ? FOR UPDATE');
+    $statement->execute([$patientId]);
+    $statement = $db->prepare('SELECT estado FROM citas WHERE id = ? FOR UPDATE');
+    $statement->execute([$id]);
+    $current = $statement->fetchColumn();
+    if ($current !== $status && $current !== 'Pendiente') throw new ApiException('La cita ya fue cerrada. Programe una nueva cita si necesita otra atención.', 409);
+    $statement = $db->prepare('UPDATE citas SET estado = ? WHERE id = ?');
+    $statement->execute([$status, $id]);
+    $db->commit();
+    api_json(['success' => true, 'message' => 'El estado de la cita se actualizó correctamente.']);
+} catch (Throwable $error) {
+    if ($db->inTransaction()) $db->rollBack();
+    throw $error;
 }

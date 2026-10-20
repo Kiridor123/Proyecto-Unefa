@@ -1,122 +1,94 @@
-// Búsqueda de Morbilidad por rango de fechas
+let morbilidadRequestVersion = 0;
+let morbilidadResultRange = null;
+
+function reportRange() {
+    return { inicio: document.getElementById('morbilidadInicio').value, fin: document.getElementById('morbilidadFin').value };
+}
+function invalidateMorbilidad() {
+    morbilidadResultRange = null;
+    activeRequests.get('morbilidad')?.abort();
+    morbilidadRequestVersion++;
+    document.getElementById('section-reportes')?.setAttribute('aria-busy', 'false');
+    document.getElementById('btnImprimirMorbilidad').disabled = true;
+    setVisible(document.getElementById('morbilidadLoader'), false);
+    setVisible(document.getElementById('morbilidadTableWrap'), false);
+    setVisible(document.getElementById('morbilidadCards'), false);
+    setVisible(document.getElementById('morbilidadError'), false);
+    setVisible(document.getElementById('morbilidadEmptyState'), true);
+    const copy = document.getElementById('morbilidadEmptyText');
+    if (copy) copy.textContent = 'Seleccione el período y consulte el reporte para ver los resultados actualizados.';
+    const count = document.getElementById('morbilidadCount');
+    if (count) count.textContent = 'Sin consulta de período';
+}
 async function buscarMorbilidad() {
-    const inicio = document.getElementById('morbilidadInicio').value;
-    const fin = document.getElementById('morbilidadFin').value;
-    if (!inicio || !fin) {
-        showNotification('warning', 'Por favor seleccione ambas fechas.');
+    const range = reportRange();
+    if (!range.inicio || !range.fin) {
+        showNotification('warning', 'Seleccione la fecha inicial y la fecha final.');
+        document.getElementById(!range.inicio ? 'morbilidadInicio' : 'morbilidadFin').focus();
         return;
     }
-    
-    const tableBody = document.getElementById('morbilidadTableBody');
-    const tableWrap = document.getElementById('morbilidadTableWrap');
-    const cardsContainer = document.getElementById('morbilidadCards');
+    if (range.fin < range.inicio) {
+        showNotification('warning', 'La fecha final debe ser igual o posterior a la fecha inicial.');
+        document.getElementById('morbilidadFin').focus();
+        return;
+    }
+    const version = ++morbilidadRequestVersion;
+    const body = document.getElementById('morbilidadTableBody');
+    const table = document.getElementById('morbilidadTableWrap');
+    const cards = document.getElementById('morbilidadCards');
     const loader = document.getElementById('morbilidadLoader');
-    const emptyState = document.getElementById('morbilidadEmptyState');
-    const emptyText = document.getElementById('morbilidadEmptyText');
-    const btnImprimir = document.getElementById('btnImprimirMorbilidad');
-    
-    if (!tableBody || !btnImprimir) return;
-    
-    // Ocultar todo y mostrar spinner
-    if (tableWrap) tableWrap.style.display = 'none';
-    if (cardsContainer) cardsContainer.style.display = 'none';
-    if (emptyState) emptyState.classList.add('hidden');
-    if (loader) loader.classList.remove('hidden');
-    
-    btnImprimir.disabled = true;
-    tableBody.innerHTML = '';
-    if (cardsContainer) cardsContainer.innerHTML = '';
-    
+    const empty = document.getElementById('morbilidadEmptyState');
+    const print = document.getElementById('btnImprimirMorbilidad');
+    if (!body || !print) return;
+    morbilidadResultRange = null;
+    print.disabled = true;
+    setVisible(table, false);
+    setVisible(cards, false);
+    setVisible(empty, false);
+    setVisible(document.getElementById('morbilidadError'), false);
+    setVisible(loader, true, 'flex');
+    document.getElementById('section-reportes')?.setAttribute('aria-busy', 'true');
     try {
-        let res = await fetch(`api/get_morbilidad.php?fecha_inicio=${inicio}&fecha_fin=${fin}`);
-        let json = await res.json();
-        
-        if (json.success) {
-            const consultas = json.data;
-            
-            if (consultas.length === 0) {
-                if (emptyText) emptyText.textContent = 'No se encontraron consultas en este rango de fechas.';
-                if (emptyState) emptyState.classList.remove('hidden');
-            } else {
-                consultas.forEach(c => {
-                    const initials = `${escapeHTML(c.nombres.charAt(0))}${escapeHTML(c.apellidos.charAt(0))}`;
-                    const fullName = `${escapeHTML(c.nombres)} ${escapeHTML(c.apellidos)}`;
-                    
-                    // ── FILA DE TABLA (visible solo en md+) ───────────────────
-                    const row = document.createElement('tr');
-                    row.className = 'border-b border-slate-100 hover:bg-slate-50 transition';
-                    row.innerHTML = `
-                        <td class="px-4 py-3 font-semibold text-slate-700">${fullName}</td>
-                        <td class="px-4 py-3 text-slate-600">${escapeHTML(c.cedula)}</td>
-                        <td class="px-4 py-3 text-slate-500">${escapeHTML(c.fecha_circunstancia)}</td>
-                        <td class="px-4 py-3 text-slate-500">${escapeHTML(c.categoria)}</td>
-                        <td class="px-4 py-3 text-slate-500">${escapeHTML(c.vital_peso_talla || 'N/A')}</td>
-                        <td class="px-4 py-3 text-slate-500">${escapeHTML(c.vital_ta || 'N/A')}</td>
-                        <td class="px-4 py-3 font-bold text-slate-800">${escapeHTML(c.diagnostico || c.resumen)}</td>
-                    `;
-                    tableBody.appendChild(row);
-                    
-                    // ── TARJETA MÓVIL (visible solo en < md) ─────────────────
-                    if (cardsContainer) {
-                        const card = document.createElement('div');
-                        card.className = 'glass-panel p-5 rounded-2xl border border-slate-100 bg-white/85 hover:bg-white transition-all duration-300 flex flex-col justify-between shadow-sm hover:shadow-md gap-4 relative text-left';
-                        card.innerHTML = `
-                            <div class="flex items-start justify-between gap-3">
-                                <div class="flex items-center gap-3 min-w-0">
-                                    <div class="w-11 h-11 rounded-full bg-brand-50 text-brand-600 flex items-center justify-center font-bold text-sm shrink-0 border border-brand-100 shadow-sm">${initials}</div>
-                                    <div class="min-w-0">
-                                        <h4 class="font-bold text-slate-800 text-sm sm:text-base truncate leading-tight">${fullName}</h4>
-                                        <p class="text-xs text-slate-500 font-semibold mt-1 flex items-center gap-1">
-                                            <i class="ph ph-identification-card text-brand-500 text-sm"></i> ${escapeHTML(c.cedula)}
-                                        </p>
-                                    </div>
-                                </div>
-                                <span class="px-2.5 py-1 rounded-full text-[10px] font-bold bg-slate-100 text-slate-600 border border-slate-200/50 shrink-0">${escapeHTML(c.categoria)}</span>
-                            </div>
-                            
-                            <div class="border-t border-slate-100/70 pt-3 grid grid-cols-2 gap-3 text-[11px] text-slate-500">
-                                <div class="flex flex-col">
-                                    <span class="text-slate-400">Fecha Eval:</span>
-                                    <span class="font-semibold text-slate-700">${escapeHTML(c.fecha_circunstancia)}</span>
-                                </div>
-                                <div class="flex flex-col">
-                                    <span class="text-slate-400">T.A. / Medidas:</span>
-                                    <span class="font-semibold text-slate-700">${escapeHTML(c.vital_ta || 'N/A')} &bull; ${escapeHTML(c.vital_peso_talla || 'N/A')}</span>
-                                </div>
-                            </div>
-                            
-                            <div class="border-t border-slate-100/70 pt-3">
-                                <span class="text-[10px] uppercase font-bold text-slate-400 block mb-1">Diagnóstico / Resumen:</span>
-                                <p class="text-xs font-bold text-slate-800 leading-relaxed bg-brand-50/50 p-2.5 border border-brand-100/30 rounded-xl">${escapeHTML(c.diagnostico || c.resumen)}</p>
-                            </div>
-                        `;
-                        cardsContainer.appendChild(card);
-                    }
-                });
-                
-                if (tableWrap) tableWrap.style.display = '';
-                if (cardsContainer) cardsContainer.style.display = '';
-                btnImprimir.disabled = false;
-            }
-        } else {
-            showNotification('error', json.message);
-            if (emptyText) emptyText.textContent = `Error: ${json.message}`;
-            if (emptyState) emptyState.classList.remove('hidden');
-        }
-    } catch(e) {
-        console.error(e);
-        showNotification('error', 'Hubo un error de conexión con el servidor.');
-        if (emptyText) emptyText.textContent = 'Error al conectar con el servidor.';
-        if (emptyState) emptyState.classList.remove('hidden');
+        const parameters = new URLSearchParams({ fecha_inicio: range.inicio, fecha_fin: range.fin });
+        const json = await apiRequest(`api/get_morbilidad.php?${parameters}`, {}, 'morbilidad');
+        if (version !== morbilidadRequestVersion) return;
+        const consultas = Array.isArray(json.data) ? json.data : [];
+        body.replaceChildren();
+        cards?.replaceChildren();
+        consultas.forEach(consulta => {
+            const fullName = `${consulta.nombres ?? ''} ${consulta.apellidos ?? ''}`.trim();
+            const diagnosis = consulta.diagnostico || consulta.resumen || 'Sin diagnóstico registrado';
+            const row = document.createElement('tr');
+            row.innerHTML = `<td>${escapeHTML(fullName)}</td><td>${escapeHTML(consulta.cedula)}</td><td>${escapeHTML(formatDate(consulta.fecha_circunstancia))}</td><td>${escapeHTML(consulta.categoria)}</td><td>${escapeHTML(consulta.vital_peso_talla || '—')}</td><td>${escapeHTML(consulta.vital_ta || '—')}</td><td class="report-diagnosis">${escapeHTML(diagnosis)}</td>`;
+            body.append(row);
+            const card = document.createElement('article');
+            card.className = 'record-card';
+            card.innerHTML = `<div class="record-identity"><div><h3>${escapeHTML(fullName)}</h3><p>${escapeHTML(consulta.cedula)}</p></div><span class="status-badge">${escapeHTML(consulta.categoria)}</span></div><dl class="record-meta report-record-details"><div><dt>Evaluación</dt><dd>${escapeHTML(formatDate(consulta.fecha_circunstancia))}</dd></div><div><dt>Tensión arterial</dt><dd>${escapeHTML(consulta.vital_ta || 'Sin registro')}</dd></div><div><dt>Peso y talla</dt><dd>${escapeHTML(consulta.vital_peso_talla || 'Sin registro')}</dd></div></dl><p class="report-diagnosis"><strong>Diagnóstico</strong><br>${escapeHTML(diagnosis)}</p>`;
+            cards?.append(card);
+        });
+        morbilidadResultRange = range;
+        print.disabled = !consultas.length;
+        setVisible(table, Boolean(consultas.length));
+        setVisible(cards, Boolean(consultas.length));
+        setVisible(empty, !consultas.length);
+        const emptyText = document.getElementById('morbilidadEmptyText');
+        if (emptyText) emptyText.textContent = 'No hay consultas registradas en este período. Pruebe otro rango de fechas.';
+        const count = document.getElementById('morbilidadCount');
+        if (count) count.textContent = `${consultas.length} ${consultas.length === 1 ? 'consulta' : 'consultas'} · ${formatDate(range.inicio)} al ${formatDate(range.fin)}`;
+    } catch (error) {
+        if (error.name !== 'AbortError') showBlockError('morbilidadError', loader, error.message, buscarMorbilidad);
     } finally {
-        if (loader) loader.classList.add('hidden');
+        if (version === morbilidadRequestVersion) {
+            setVisible(loader, false);
+            document.getElementById('section-reportes')?.setAttribute('aria-busy', 'false');
+        }
     }
 }
-
 function imprimirMorbilidadDirecta() {
-    const inicio = document.getElementById('morbilidadInicio').value;
-    const fin = document.getElementById('morbilidadFin').value;
-    if (inicio && fin) {
-        window.open(`api/print_morbilidad.php?fecha_inicio=${inicio}&fecha_fin=${fin}`, '_blank');
-    }
+    if (!morbilidadResultRange || document.getElementById('btnImprimirMorbilidad').disabled) return;
+    const current = reportRange();
+    if (current.inicio !== morbilidadResultRange.inicio || current.fin !== morbilidadResultRange.fin) { invalidateMorbilidad(); return; }
+    const parameters = new URLSearchParams({ fecha_inicio: current.inicio, fecha_fin: current.fin });
+    window.open(`api/print_morbilidad.php?${parameters}`, '_blank', 'noopener,noreferrer');
 }
+for (const id of ['morbilidadInicio', 'morbilidadFin']) document.getElementById(id)?.addEventListener('change', invalidateMorbilidad);

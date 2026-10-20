@@ -19,3 +19,12 @@ RUN docker-php-ext-configure gd --with-freetype --with-jpeg \
 
 # Ajustar permisos por defecto del directorio de trabajo
 RUN chown -R www-data:www-data /var/www/html
+
+COPY docker/php/security.conf /etc/apache2/conf-available/salud-security.conf
+COPY docker/php/entrypoint.sh /usr/local/bin/salud-entrypoint
+RUN a2enmod headers \
+    && a2enconf salud-security \
+    && chmod +x /usr/local/bin/salud-entrypoint
+
+ENTRYPOINT ["salud-entrypoint"]
+CMD ["apache2-foreground"]

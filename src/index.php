@@ -1,13 +1,15 @@
 <?php include 'components/head.php'; ?>
-<body class="text-slate-800 antialiased min-h-screen flex">
+<body class="app-body antialiased">
+    <a class="skip-link" href="#mainContent">Ir al contenido</a>
     <?php include 'components/sidebar.php'; ?>
-    <main class="flex-1 ml-0 md:ml-64 flex flex-col min-h-screen">
-        <?php include 'components/header.php'; ?>
-        <div class="p-4 sm:p-8 flex-1 flex flex-col gap-6 sm:gap-8 max-w-7xl mx-auto w-full">
+    <main id="mainContent" class="app-main" tabindex="-1">
+        <div class="page-shell">
+            <?php include 'components/header.php'; ?>
             <?php include 'views/dashboard.php'; ?>
             <?php include 'views/pacientes.php'; ?>
             <?php include 'views/citas.php'; ?>
             <?php include 'views/reportes.php'; ?>
+            <footer class="page-footer"><span>Salud UNEFA</span><span>Gestión de atención universitaria</span></footer>
         </div>
     </main>
     <?php include 'modals/patient_drawer.php'; ?>

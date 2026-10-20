@@ -1,11 +1,9 @@
 <?php
-require_once '../config/Database.php';
+define('API_HTML_RESPONSE', true);
+require_once __DIR__ . '/../config/bootstrap.php';
+api_method('GET');
 
-$consulta_id = isset($_GET['consulta_id']) ? (int)$_GET['consulta_id'] : 0;
-
-if ($consulta_id <= 0) {
-    die("ID de consulta inválido.");
-}
+$consulta_id = api_id($_GET['consulta_id'] ?? null, 'consulta_id');
 
 try {
     $db = Config\Database::getInstance()->getConnection();
@@ -21,7 +19,7 @@ try {
     $consulta = $stmt->fetch();
     
     if (!$consulta) {
-        die("Consulta no encontrada.");
+        throw new ApiException('La consulta no existe.', 404);
     }
     
     // Calcular días de reposo
@@ -29,10 +27,11 @@ try {
     if ($consulta['fecha_inicio_reposo'] && $consulta['fecha_fin_reposo']) {
         $start = new DateTime($consulta['fecha_inicio_reposo']);
         $end = new DateTime($consulta['fecha_fin_reposo']);
+        if ($end < $start) throw new ApiException('Revise las fechas de este reposo antes de imprimirlo.', 422);
         $interval = $start->diff($end);
         $dias_reposo = $interval->days + 1; // Inclusive
     } else {
-        die("Esta consulta no tiene un reposo registrado.");
+        throw new ApiException('Esta consulta no tiene un reposo registrado.', 422);
     }
     
     // Formatear fechas en español
@@ -49,8 +48,8 @@ try {
     $fecha_inicio_f = date('d/m/Y', strtotime($consulta['fecha_inicio_reposo']));
     $fecha_fin_f = date('d/m/Y', strtotime($consulta['fecha_fin_reposo']));
 
-} catch (Exception $e) {
-    die("Error de base de datos: " . $e->getMessage());
+} catch (Throwable $e) {
+    throw $e;
 }
 ?>
 <!DOCTYPE html>
@@ -59,7 +58,7 @@ try {
     <meta charset="UTF-8">
     <title>Reposo Médico - <?php echo htmlspecialchars($consulta['cedula']); ?></title>
     <!-- Tailwind CSS -->
-    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="../css/tailwind.css">
     <style>
         @media print {
             body {

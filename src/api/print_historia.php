@@ -1,11 +1,9 @@
 <?php
-require_once '../config/Database.php';
+define('API_HTML_RESPONSE', true);
+require_once __DIR__ . '/../config/bootstrap.php';
+api_method('GET');
 
-$paciente_id = isset($_GET['paciente_id']) ? (int)$_GET['paciente_id'] : 0;
-
-if ($paciente_id <= 0) {
-    die("ID de paciente inválido.");
-}
+$paciente_id = api_id($_GET['paciente_id'] ?? null, 'paciente_id');
 
 try {
     $db = Config\Database::getInstance()->getConnection();
@@ -21,7 +19,7 @@ try {
     $paciente = $stmtPaciente->fetch();
     
     if (!$paciente) {
-        die("Paciente no encontrado.");
+        throw new ApiException('El paciente no existe.', 404);
     }
     
     // Calcular edad
@@ -54,8 +52,8 @@ try {
     $mes_hoy = $meses[(int)$hoy->format('m')];
     $anio_hoy = $hoy->format('Y');
 
-} catch (Exception $e) {
-    die("Error de base de datos: " . $e->getMessage());
+} catch (Throwable $e) {
+    throw $e;
 }
 ?>
 <!DOCTYPE html>
@@ -64,7 +62,7 @@ try {
     <meta charset="UTF-8">
     <title>Historia Clínica - <?php echo htmlspecialchars($paciente['cedula']); ?></title>
     <!-- Tailwind CSS -->
-    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="../css/tailwind.css">
     <style>
         @media print {
             body {
@@ -169,12 +167,12 @@ try {
                     <td class="p-1">Otros</td>
                 </tr>
                 <tr class="text-slate-700 italic text-[10px]">
-                    <td class="p-1.5 h-12" valign="top"><?php echo htmlspecialchars($paciente['antecedente_cardiovascular'] ?: 'Negados'); ?></td>
-                    <td class="p-1.5 h-12" valign="top"><?php echo htmlspecialchars($paciente['antecedente_oseo'] ?: 'Negados'); ?></td>
-                    <td class="p-1.5 h-12" valign="top"><?php echo htmlspecialchars($paciente['antecedente_respiratorio'] ?: 'Negados'); ?></td>
-                    <td class="p-1.5 h-12" valign="top"><?php echo htmlspecialchars($paciente['antecedente_digestivo'] ?: 'Negados'); ?></td>
-                    <td class="p-1.5 h-12" valign="top"><?php echo htmlspecialchars($paciente['antecedente_endocrino'] ?: 'Negados'); ?></td>
-                    <td class="p-1.5 h-12" valign="top"><?php echo htmlspecialchars($paciente['antecedente_otros'] ?: 'Negados'); ?></td>
+                    <td class="p-1.5 h-12" valign="top"><?php echo htmlspecialchars($paciente['antecedente_cardiovascular'] ?: 'No registrado'); ?></td>
+                    <td class="p-1.5 h-12" valign="top"><?php echo htmlspecialchars($paciente['antecedente_oseo'] ?: 'No registrado'); ?></td>
+                    <td class="p-1.5 h-12" valign="top"><?php echo htmlspecialchars($paciente['antecedente_respiratorio'] ?: 'No registrado'); ?></td>
+                    <td class="p-1.5 h-12" valign="top"><?php echo htmlspecialchars($paciente['antecedente_digestivo'] ?: 'No registrado'); ?></td>
+                    <td class="p-1.5 h-12" valign="top"><?php echo htmlspecialchars($paciente['antecedente_endocrino'] ?: 'No registrado'); ?></td>
+                    <td class="p-1.5 h-12" valign="top"><?php echo htmlspecialchars($paciente['antecedente_otros'] ?: 'No registrado'); ?></td>
                 </tr>
             </table>
         </div>
@@ -186,7 +184,7 @@ try {
                 <tr>
                     <td class="p-2 text-slate-700 font-medium italic min-h-[35px]">
                         <span class="font-semibold text-slate-500 not-italic">Procedimientos / Intervenciones:</span> 
-                        <?php echo htmlspecialchars($paciente['antecedente_quirurgico'] ?: 'Negados'); ?>
+                        <?php echo htmlspecialchars($paciente['antecedente_quirurgico'] ?: 'No registrado'); ?>
                     </td>
                 </tr>
             </table>
@@ -218,7 +216,7 @@ try {
                 <table class="w-full text-left border-collapse">
                     <tr>
                         <td class="p-1.5 flex flex-col justify-between" style="height: 43px;">
-                            <div><span class="font-semibold text-slate-500">¿Tiene Tatuajes?:</span> <span class="font-bold"><?php echo htmlspecialchars($paciente['tiene_tatuajes'] ?: 'No'); ?></span></div>
+                            <div><span class="font-semibold text-slate-500">¿Tiene Tatuajes?:</span> <span class="font-bold"><?php echo htmlspecialchars($paciente['tiene_tatuajes'] ?: 'No registrado'); ?></span></div>
                             <div class="text-[8px] text-slate-500 leading-tight">
                                 <span class="font-semibold">Compromiso:</span> Yo me comprometo con la institución a no realizarme tatuajes durante el desarrollo de mi carrera.
                             </div>
@@ -233,8 +231,8 @@ try {
             <div class="bg-slate-100 px-3 py-1 font-bold text-[11px] uppercase border border-slate-400 border-b-0">6. Antecedentes Familiares Patológicos</div>
             <table class="w-full text-left table-fixed border-collapse">
                 <tr>
-                    <td class="p-1.5 w-1/2"><span class="font-semibold text-slate-500">Padre:</span> <span class="text-slate-700 italic"><?php echo htmlspecialchars($paciente['antecedente_padre'] ?: 'Aparentemente Sano'); ?></span></td>
-                    <td class="p-1.5 w-1/2"><span class="font-semibold text-slate-500">Madre:</span> <span class="text-slate-700 italic"><?php echo htmlspecialchars($paciente['antecedente_madre'] ?: 'Aparentemente Sana'); ?></span></td>
+                    <td class="p-1.5 w-1/2"><span class="font-semibold text-slate-500">Padre:</span> <span class="text-slate-700 italic"><?php echo htmlspecialchars($paciente['antecedente_padre'] ?: 'No registrado'); ?></span></td>
+                    <td class="p-1.5 w-1/2"><span class="font-semibold text-slate-500">Madre:</span> <span class="text-slate-700 italic"><?php echo htmlspecialchars($paciente['antecedente_madre'] ?: 'No registrado'); ?></span></td>
                 </tr>
                 <tr>
                     <td class="p-1.5"><span class="font-semibold text-slate-500">Hermanos:</span> <span class="text-slate-700 italic"><?php echo htmlspecialchars($paciente['antecedente_hermanos'] ?: 'Aparentemente Sanos'); ?></span></td>
@@ -286,13 +284,13 @@ try {
                 <tr>
                     <td class="p-2 text-[10px]">
                         <div class="grid grid-cols-2 gap-x-6 gap-y-1.5">
-                            <div><span class="font-semibold text-slate-700">Piel y mucosa:</span> <span class="text-slate-600"><?php echo htmlspecialchars($consulta['fisico_piel'] ?? 'Sin alteraciones'); ?></span></div>
-                            <div><span class="font-semibold text-slate-700">Cabeza:</span> <span class="text-slate-600"><?php echo htmlspecialchars($consulta['fisico_cabeza'] ?? 'Sin alteraciones'); ?></span></div>
-                            <div><span class="font-semibold text-slate-700">Cuello:</span> <span class="text-slate-600"><?php echo htmlspecialchars($consulta['fisico_cuello'] ?? 'Sin alteraciones'); ?></span></div>
-                            <div><span class="font-semibold text-slate-700">Tórax:</span> <span class="text-slate-600"><?php echo htmlspecialchars($consulta['fisico_torax'] ?? 'Sin alteraciones'); ?></span></div>
-                            <div><span class="font-semibold text-slate-700">Abdomen:</span> <span class="text-slate-600"><?php echo htmlspecialchars($consulta['fisico_abdomen'] ?? 'Sin alterations'); ?></span></div>
-                            <div><span class="font-semibold text-slate-700">Extremidades:</span> <span class="text-slate-600"><?php echo htmlspecialchars($consulta['fisico_extremidades'] ?? 'Sin alteraciones'); ?></span></div>
-                            <div class="col-span-2"><span class="font-semibold text-slate-700">Neurológico:</span> <span class="text-slate-600"><?php echo htmlspecialchars($consulta['fisico_neurologico'] ?? 'Sin alteraciones'); ?></span></div>
+                            <div><span class="font-semibold text-slate-700">Piel y mucosa:</span> <span class="text-slate-600"><?php echo htmlspecialchars($consulta['fisico_piel'] ?? 'No registrado'); ?></span></div>
+                            <div><span class="font-semibold text-slate-700">Cabeza:</span> <span class="text-slate-600"><?php echo htmlspecialchars($consulta['fisico_cabeza'] ?? 'No registrado'); ?></span></div>
+                            <div><span class="font-semibold text-slate-700">Cuello:</span> <span class="text-slate-600"><?php echo htmlspecialchars($consulta['fisico_cuello'] ?? 'No registrado'); ?></span></div>
+                            <div><span class="font-semibold text-slate-700">Tórax:</span> <span class="text-slate-600"><?php echo htmlspecialchars($consulta['fisico_torax'] ?? 'No registrado'); ?></span></div>
+                            <div><span class="font-semibold text-slate-700">Abdomen:</span> <span class="text-slate-600"><?php echo htmlspecialchars($consulta['fisico_abdomen'] ?? 'No registrado'); ?></span></div>
+                            <div><span class="font-semibold text-slate-700">Extremidades:</span> <span class="text-slate-600"><?php echo htmlspecialchars($consulta['fisico_extremidades'] ?? 'No registrado'); ?></span></div>
+                            <div class="col-span-2"><span class="font-semibold text-slate-700">Neurológico:</span> <span class="text-slate-600"><?php echo htmlspecialchars($consulta['fisico_neurologico'] ?? 'No registrado'); ?></span></div>
                         </div>
                         <div class="mt-3 border-t border-slate-200 pt-2 grid grid-cols-1 gap-1">
                             <div><span class="font-semibold text-slate-700">Laboratorios / Exámenes Solicitados:</span> <span class="text-slate-600"><?php echo htmlspecialchars($consulta['laboratorios'] ?? 'Ninguno'); ?></span></div>

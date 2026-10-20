@@ -1,0 +1,21 @@
+<?php
+declare(strict_types=1);
+require_once __DIR__ . '/../config/bootstrap.php';
+require_once __DIR__ . '/../config/Attachments.php';
+api_method('GET');
+$id = api_id($_GET['id'] ?? null);
+$statement = api_db()->prepare('SELECT ruta_archivo, tipo_archivo FROM archivos_adjuntos WHERE id = ?');
+$statement->execute([$id]);
+$attachment = $statement->fetch();
+if (!$attachment) throw new ApiException('El archivo no existe.', 404);
+$path = api_attachment_path($attachment['ruta_archivo']);
+if (!$path || !is_readable($path)) throw new ApiException('El archivo no está disponible.', 404);
+$mime = (new finfo(FILEINFO_MIME_TYPE))->file($path);
+$extensions = ['image/jpeg' => 'jpg', 'image/png' => 'png', 'application/pdf' => 'pdf'];
+if (!isset($extensions[$mime]) || $mime !== $attachment['tipo_archivo']) throw new ApiException('El archivo no está disponible para su descarga.', 404);
+header('Content-Type: ' . $mime);
+header('Content-Length: ' . filesize($path));
+header('Content-Disposition: attachment; filename="adjunto-' . $id . '.' . $extensions[$mime] . '"');
+header("Content-Security-Policy: default-src 'none'; sandbox");
+readfile($path);
+exit;

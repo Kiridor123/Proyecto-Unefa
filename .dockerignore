@@ -1,0 +1,9 @@
+.git
+.agents
+.claude
+.env
+.taste-skill
+.impeccable/review
+node_modules
+storage
+*.docx

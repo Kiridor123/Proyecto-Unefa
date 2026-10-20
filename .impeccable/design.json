@@ -1,0 +1,488 @@
+{
+  "schemaVersion": 2,
+  "generatedAt": "2026-10-20T19:58:53.994Z",
+  "title": "Design System: Salud UNEFA",
+  "extensions": {
+    "colorMeta": {
+      "primary": {
+        "role": "primary",
+        "displayName": "primary",
+        "canonical": "#202a30",
+        "tonalRamp": [
+          "oklch(15.0% 0.0178 234.6)",
+          "oklch(26.4% 0.0178 234.6)",
+          "oklch(37.9% 0.0178 234.6)",
+          "oklch(49.3% 0.0178 234.6)",
+          "oklch(60.7% 0.0178 234.6)",
+          "oklch(72.1% 0.0178 234.6)",
+          "oklch(83.6% 0.0178 234.6)",
+          "oklch(95.0% 0.0178 234.6)"
+        ]
+      },
+      "neutral-bg": {
+        "role": "neutral",
+        "displayName": "neutral-bg",
+        "canonical": "#f6f8f8",
+        "tonalRamp": [
+          "oklch(15.0% 0.0021 197.1)",
+          "oklch(26.4% 0.0021 197.1)",
+          "oklch(37.9% 0.0021 197.1)",
+          "oklch(49.3% 0.0021 197.1)",
+          "oklch(60.7% 0.0021 197.1)",
+          "oklch(72.1% 0.0021 197.1)",
+          "oklch(83.6% 0.0021 197.1)",
+          "oklch(95.0% 0.0021 197.1)"
+        ]
+      },
+      "surface": {
+        "role": "neutral",
+        "displayName": "surface",
+        "canonical": "#ffffff",
+        "tonalRamp": [
+          "oklch(15.0% 0.0000 0.0)",
+          "oklch(26.4% 0.0000 0.0)",
+          "oklch(37.9% 0.0000 0.0)",
+          "oklch(49.3% 0.0000 0.0)",
+          "oklch(60.7% 0.0000 0.0)",
+          "oklch(72.1% 0.0000 0.0)",
+          "oklch(83.6% 0.0000 0.0)",
+          "oklch(95.0% 0.0000 0.0)"
+        ]
+      },
+      "raised": {
+        "role": "neutral",
+        "displayName": "raised",
+        "canonical": "#f1f4f4",
+        "tonalRamp": [
+          "oklch(15.0% 0.0032 197.1)",
+          "oklch(26.4% 0.0032 197.1)",
+          "oklch(37.9% 0.0032 197.1)",
+          "oklch(49.3% 0.0032 197.1)",
+          "oklch(60.7% 0.0032 197.1)",
+          "oklch(72.1% 0.0032 197.1)",
+          "oklch(83.6% 0.0032 197.1)",
+          "oklch(95.0% 0.0032 197.1)"
+        ]
+      },
+      "active": {
+        "role": "neutral",
+        "displayName": "active",
+        "canonical": "#e7eded",
+        "tonalRamp": [
+          "oklch(15.0% 0.0064 197.0)",
+          "oklch(26.4% 0.0064 197.0)",
+          "oklch(37.9% 0.0064 197.0)",
+          "oklch(49.3% 0.0064 197.0)",
+          "oklch(60.7% 0.0064 197.0)",
+          "oklch(72.1% 0.0064 197.0)",
+          "oklch(83.6% 0.0064 197.0)",
+          "oklch(95.0% 0.0064 197.0)"
+        ]
+      },
+      "border": {
+        "role": "neutral",
+        "displayName": "border",
+        "canonical": "#e0e6e6",
+        "tonalRamp": [
+          "oklch(15.0% 0.0065 197.0)",
+          "oklch(26.4% 0.0065 197.0)",
+          "oklch(37.9% 0.0065 197.0)",
+          "oklch(49.3% 0.0065 197.0)",
+          "oklch(60.7% 0.0065 197.0)",
+          "oklch(72.1% 0.0065 197.0)",
+          "oklch(83.6% 0.0065 197.0)",
+          "oklch(95.0% 0.0065 197.0)"
+        ]
+      },
+      "control": {
+        "role": "neutral",
+        "displayName": "control",
+        "canonical": "#c4cece",
+        "tonalRamp": [
+          "oklch(15.0% 0.0109 196.9)",
+          "oklch(26.4% 0.0109 196.9)",
+          "oklch(37.9% 0.0109 196.9)",
+          "oklch(49.3% 0.0109 196.9)",
+          "oklch(60.7% 0.0109 196.9)",
+          "oklch(72.1% 0.0109 196.9)",
+          "oklch(83.6% 0.0109 196.9)",
+          "oklch(95.0% 0.0109 196.9)"
+        ]
+      },
+      "ink": {
+        "role": "neutral",
+        "displayName": "ink",
+        "canonical": "#202a30",
+        "tonalRamp": [
+          "oklch(15.0% 0.0178 234.6)",
+          "oklch(26.4% 0.0178 234.6)",
+          "oklch(37.9% 0.0178 234.6)",
+          "oklch(49.3% 0.0178 234.6)",
+          "oklch(60.7% 0.0178 234.6)",
+          "oklch(72.1% 0.0178 234.6)",
+          "oklch(83.6% 0.0178 234.6)",
+          "oklch(95.0% 0.0178 234.6)"
+        ]
+      },
+      "muted": {
+        "role": "neutral",
+        "displayName": "muted",
+        "canonical": "#5c696e",
+        "tonalRamp": [
+          "oklch(15.0% 0.0177 222.9)",
+          "oklch(26.4% 0.0177 222.9)",
+          "oklch(37.9% 0.0177 222.9)",
+          "oklch(49.3% 0.0177 222.9)",
+          "oklch(60.7% 0.0177 222.9)",
+          "oklch(72.1% 0.0177 222.9)",
+          "oklch(83.6% 0.0177 222.9)",
+          "oklch(95.0% 0.0177 222.9)"
+        ]
+      },
+      "accent": {
+        "role": "primary",
+        "displayName": "accent",
+        "canonical": "#256e78",
+        "tonalRamp": [
+          "oklch(15.0% 0.0719 208.0)",
+          "oklch(26.4% 0.0719 208.0)",
+          "oklch(37.9% 0.0719 208.0)",
+          "oklch(49.3% 0.0719 208.0)",
+          "oklch(60.7% 0.0719 208.0)",
+          "oklch(72.1% 0.0719 208.0)",
+          "oklch(83.6% 0.0719 208.0)",
+          "oklch(95.0% 0.0719 208.0)"
+        ]
+      },
+      "negative": {
+        "role": "status",
+        "displayName": "negative",
+        "canonical": "#a6353a",
+        "tonalRamp": [
+          "oklch(15.0% 0.1482 21.9)",
+          "oklch(26.4% 0.1482 21.9)",
+          "oklch(37.9% 0.1482 21.9)",
+          "oklch(49.3% 0.1482 21.9)",
+          "oklch(60.7% 0.1482 21.9)",
+          "oklch(72.1% 0.1482 21.9)",
+          "oklch(83.6% 0.1482 21.9)",
+          "oklch(95.0% 0.1482 21.9)"
+        ]
+      },
+      "positive": {
+        "role": "status",
+        "displayName": "positive",
+        "canonical": "#236b50",
+        "tonalRamp": [
+          "oklch(15.0% 0.0840 164.6)",
+          "oklch(26.4% 0.0840 164.6)",
+          "oklch(37.9% 0.0840 164.6)",
+          "oklch(49.3% 0.0840 164.6)",
+          "oklch(60.7% 0.0840 164.6)",
+          "oklch(72.1% 0.0840 164.6)",
+          "oklch(83.6% 0.0840 164.6)",
+          "oklch(95.0% 0.0840 164.6)"
+        ]
+      },
+      "cancelled-ink": {
+        "role": "state",
+        "canonical": "#5c686d",
+        "displayName": "cancelled-ink",
+        "tonalRamp": [
+          "oklch(15.0% 0.0167 224.7)",
+          "oklch(26.4% 0.0167 224.7)",
+          "oklch(37.9% 0.0167 224.7)",
+          "oklch(49.3% 0.0167 224.7)",
+          "oklch(60.7% 0.0167 224.7)",
+          "oklch(72.1% 0.0167 224.7)",
+          "oklch(83.6% 0.0167 224.7)",
+          "oklch(95.0% 0.0167 224.7)"
+        ]
+      },
+      "control-hover": {
+        "role": "state",
+        "canonical": "#9baaaa",
+        "displayName": "control-hover",
+        "tonalRamp": [
+          "oklch(15.0% 0.0169 196.8)",
+          "oklch(26.4% 0.0169 196.8)",
+          "oklch(37.9% 0.0169 196.8)",
+          "oklch(49.3% 0.0169 196.8)",
+          "oklch(60.7% 0.0169 196.8)",
+          "oklch(72.1% 0.0169 196.8)",
+          "oklch(83.6% 0.0169 196.8)",
+          "oklch(95.0% 0.0169 196.8)"
+        ]
+      },
+      "pending-ink": {
+        "role": "state",
+        "canonical": "#7b5819",
+        "displayName": "pending-ink",
+        "tonalRamp": [
+          "oklch(15.0% 0.0896 77.8)",
+          "oklch(26.4% 0.0896 77.8)",
+          "oklch(37.9% 0.0896 77.8)",
+          "oklch(49.3% 0.0896 77.8)",
+          "oklch(60.7% 0.0896 77.8)",
+          "oklch(72.1% 0.0896 77.8)",
+          "oklch(83.6% 0.0896 77.8)",
+          "oklch(95.0% 0.0896 77.8)"
+        ]
+      },
+      "cancelled-bg": {
+        "role": "state",
+        "canonical": "#f1f3f3",
+        "displayName": "cancelled-bg",
+        "tonalRamp": [
+          "oklch(15.0% 0.0021 197.1)",
+          "oklch(26.4% 0.0021 197.1)",
+          "oklch(37.9% 0.0021 197.1)",
+          "oklch(49.3% 0.0021 197.1)",
+          "oklch(60.7% 0.0021 197.1)",
+          "oklch(72.1% 0.0021 197.1)",
+          "oklch(83.6% 0.0021 197.1)",
+          "oklch(95.0% 0.0021 197.1)"
+        ]
+      },
+      "completed-ink": {
+        "role": "state",
+        "canonical": "#236346",
+        "displayName": "completed-ink",
+        "tonalRamp": [
+          "oklch(15.0% 0.0813 160.7)",
+          "oklch(26.4% 0.0813 160.7)",
+          "oklch(37.9% 0.0813 160.7)",
+          "oklch(49.3% 0.0813 160.7)",
+          "oklch(60.7% 0.0813 160.7)",
+          "oklch(72.1% 0.0813 160.7)",
+          "oklch(83.6% 0.0813 160.7)",
+          "oklch(95.0% 0.0813 160.7)"
+        ]
+      },
+      "completed-bg": {
+        "role": "state",
+        "canonical": "#e9f4ee",
+        "displayName": "completed-bg",
+        "tonalRamp": [
+          "oklch(15.0% 0.0141 162.5)",
+          "oklch(26.4% 0.0141 162.5)",
+          "oklch(37.9% 0.0141 162.5)",
+          "oklch(49.3% 0.0141 162.5)",
+          "oklch(60.7% 0.0141 162.5)",
+          "oklch(72.1% 0.0141 162.5)",
+          "oklch(83.6% 0.0141 162.5)",
+          "oklch(95.0% 0.0141 162.5)"
+        ]
+      },
+      "pending-bg": {
+        "role": "state",
+        "canonical": "#fff5de",
+        "displayName": "pending-bg",
+        "tonalRamp": [
+          "oklch(15.0% 0.0320 87.3)",
+          "oklch(26.4% 0.0320 87.3)",
+          "oklch(37.9% 0.0320 87.3)",
+          "oklch(49.3% 0.0320 87.3)",
+          "oklch(60.7% 0.0320 87.3)",
+          "oklch(72.1% 0.0320 87.3)",
+          "oklch(83.6% 0.0320 87.3)",
+          "oklch(95.0% 0.0320 87.3)"
+        ]
+      },
+      "selection-ink": {
+        "role": "state",
+        "canonical": "#123f45",
+        "displayName": "selection-ink",
+        "tonalRamp": [
+          "oklch(15.0% 0.0488 207.6)",
+          "oklch(26.4% 0.0488 207.6)",
+          "oklch(37.9% 0.0488 207.6)",
+          "oklch(49.3% 0.0488 207.6)",
+          "oklch(60.7% 0.0488 207.6)",
+          "oklch(72.1% 0.0488 207.6)",
+          "oklch(83.6% 0.0488 207.6)",
+          "oklch(95.0% 0.0488 207.6)"
+        ]
+      },
+      "selection-bg": {
+        "role": "state",
+        "canonical": "#dceced",
+        "displayName": "selection-bg",
+        "tonalRamp": [
+          "oklch(15.0% 0.0170 201.4)",
+          "oklch(26.4% 0.0170 201.4)",
+          "oklch(37.9% 0.0170 201.4)",
+          "oklch(49.3% 0.0170 201.4)",
+          "oklch(60.7% 0.0170 201.4)",
+          "oklch(72.1% 0.0170 201.4)",
+          "oklch(83.6% 0.0170 201.4)",
+          "oklch(95.0% 0.0170 201.4)"
+        ]
+      },
+      "primary-hover": {
+        "role": "state",
+        "canonical": "#37454b",
+        "displayName": "primary-hover",
+        "tonalRamp": [
+          "oklch(15.0% 0.0207 225.8)",
+          "oklch(26.4% 0.0207 225.8)",
+          "oklch(37.9% 0.0207 225.8)",
+          "oklch(49.3% 0.0207 225.8)",
+          "oklch(60.7% 0.0207 225.8)",
+          "oklch(72.1% 0.0207 225.8)",
+          "oklch(83.6% 0.0207 225.8)",
+          "oklch(95.0% 0.0207 225.8)"
+        ]
+      }
+    },
+    "typographyMeta": {
+      "title": {
+        "displayName": "Título de pantalla",
+        "purpose": "Nombre breve de la tarea actual."
+      },
+      "section": {
+        "displayName": "Encabezado de sección",
+        "purpose": "Jerarquía operativa dentro de la vista."
+      },
+      "metric": {
+        "displayName": "Indicador",
+        "purpose": "Cifras reales del servicio."
+      },
+      "body": {
+        "displayName": "Lectura",
+        "purpose": "Contenido y filas clínicas."
+      },
+      "label": {
+        "displayName": "Etiqueta",
+        "purpose": "Campos y contexto secundario."
+      }
+    },
+    "shadows": [
+      {
+        "name": "dialog",
+        "value": "0 18px 60px rgba(24,37,40,.16)",
+        "purpose": "Diálogos e historia clínica."
+      },
+      {
+        "name": "notification",
+        "value": "0 8px 24px rgba(24,37,40,.14)",
+        "purpose": "Notificación temporal."
+      }
+    ],
+    "motion": [
+      {
+        "name": "ease-standard",
+        "value": "cubic-bezier(.2,.8,.2,1)",
+        "purpose": "Respuesta breve de menús y diálogos."
+      },
+      {
+        "name": "surface",
+        "value": "240ms",
+        "purpose": "Apertura y cierre del panel lateral."
+      }
+    ],
+    "breakpoints": [
+      {
+        "name": "phone",
+        "value": "767px"
+      },
+      {
+        "name": "fold-sidebar",
+        "value": "1023px"
+      },
+      {
+        "name": "compact-desktop",
+        "value": "1199px"
+      }
+    ]
+  },
+  "components": [
+    {
+      "name": "Botón principal",
+      "kind": "button",
+      "refersTo": "button-primary",
+      "description": "Acción principal de la pantalla o formulario.",
+      "html": "<button class=\"ds-primary\">Registrar consulta</button>",
+      "css": ".ds-primary{font:500 13px Geist,system-ui,sans-serif;padding:8px 13px;min-height:38px;line-height:1.4;border:1px solid transparent;border-radius:6px;background:var(--primary,#202a30);color:#fff;cursor:pointer}.ds-primary:hover{background:#37454b}.ds-primary:focus-visible{outline:2px solid var(--accent,#256e78);outline-offset:3px}"
+    },
+    {
+      "name": "Botón secundario",
+      "kind": "button",
+      "refersTo": "button-secondary",
+      "description": "Acción complementaria con etiqueta explícita.",
+      "html": "<button class=\"ds-secondary\">Agendar cita</button>",
+      "css": ".ds-secondary{font:500 13px Geist,system-ui,sans-serif;padding:8px 13px;min-height:38px;line-height:1.4;border:1px solid var(--control,#c4cece);border-radius:6px;background:#fff;color:var(--text,#202a30);cursor:pointer}.ds-secondary:hover{background:#f1f4f4;border-color:#9baaaa}.ds-secondary:focus-visible{outline:2px solid var(--accent,#256e78);outline-offset:3px}"
+    },
+    {
+      "name": "Campo de búsqueda",
+      "kind": "input",
+      "description": "Campo con etiqueta vinculada y foco visible.",
+      "html": "<label class=\"ds-label\" for=\"ds-search\">Buscar paciente</label><input class=\"ds-input\" id=\"ds-search\" placeholder=\"Cédula o nombre del paciente\">",
+      "css": ".ds-label{display:block;margin-bottom:7px;font:500 12px Geist,system-ui,sans-serif;color:var(--muted,#5c696e)}.ds-input{font:400 13px Geist,system-ui,sans-serif;padding:8px 11px;min-height:40px;line-height:1.5;border:1px solid var(--control,#c4cece);border-radius:6px;background:#fff;color:var(--text,#202a30);caret-color:var(--accent,#256e78)}.ds-input::placeholder{color:#657277}.ds-input:focus-visible{outline:2px solid var(--accent,#256e78);outline-offset:3px;border-color:var(--accent,#256e78)}"
+    },
+    {
+      "name": "Destino de navegación",
+      "kind": "nav",
+      "description": "Selección neutral con nombres de las áreas clínicas.",
+      "html": "<a class=\"ds-nav\" href=\"#pacientes\" aria-current=\"page\">Pacientes</a>",
+      "css": ".ds-nav{display:flex;align-items:center;min-height:42px;padding:10px 12px;border-radius:6px;background:transparent;color:var(--muted,#5c696e);font:400 14px Geist,system-ui,sans-serif;line-height:1.5;text-decoration:none}.ds-nav:hover{background:var(--raised,#f1f4f4);color:var(--text,#202a30)}.ds-nav[aria-current=\"page\"]{background:var(--active,#e7eded);color:var(--text,#202a30);font-weight:500}.ds-nav:focus-visible{outline:2px solid var(--accent,#256e78);outline-offset:3px}"
+    },
+    {
+      "name": "Estado de cita",
+      "kind": "chip",
+      "description": "El color acompaña el nombre del estado.",
+      "html": "<span class=\"ds-status\">Pendiente</span>",
+      "css": ".ds-status{display:inline-flex;align-items:center;padding:3px 7px;border-radius:4px;background:#fff5de;color:#7b5819;font:500 11px Geist,system-ui,sans-serif;line-height:1.5}"
+    },
+    {
+      "name": "Panel de datos",
+      "kind": "card",
+      "refersTo": "panel",
+      "description": "Superficie plana con jerarquía textual.",
+      "html": "<section class=\"ds-panel\"><h3>Consultas por mes</h3><p>Historial de atenciones registradas</p></section>",
+      "css": ".ds-panel{padding:20px 22px;border:1px solid var(--border,#e0e6e6);border-radius:8px;background:#fff;font-family:Geist,system-ui,sans-serif;line-height:1.5;color:var(--text,#202a30)}.ds-panel h3{margin:0;font-size:15px;font-weight:500}.ds-panel p{margin:3px 0 0;font-size:12px;color:var(--muted,#5c696e);line-height:1.65}"
+    },
+    {
+      "name": "Indicador compartido",
+      "kind": "custom",
+      "description": "Una métrica sin iconos ni fondos de color.",
+      "html": "<div class=\"ds-metric\"><p>Consultas del mes</p><strong>0</strong><span>Atenciones registradas</span></div>",
+      "css": ".ds-metric{padding:0 24px;font-family:Geist,system-ui,sans-serif;color:var(--text,#202a30)}.ds-metric p{margin:0;font-size:12px;color:var(--muted,#5c696e)}.ds-metric strong{display:block;font-size:30px;line-height:1.5;font-weight:400;font-variant-numeric:tabular-nums;letter-spacing:-.035em}.ds-metric span{font-size:12px;color:var(--muted,#5c696e)}"
+    }
+  ],
+  "narrative": {
+    "northStar": "Índice académico clínico",
+    "overview": "La interfaz prioriza la lectura prolongada de información médica y el acceso reconocible a pacientes, consultas, citas y reportes. Conserva el nombre y los términos institucionales; cada pantalla usa controles web familiares y un título que nombra su tarea.\n\nLa identidad se expresa en una superficie fría clara, una tipografía precisa y una sola tinta clínica sobre los datos gráficos. La navegación recede mientras los nombres, las cifras y las acciones mantienen jerarquía.",
+    "keyCharacteristics": [
+      "Navegación etiquetada y consistente entre las cuatro áreas.",
+      "Superficies planas con divisiones suaves.",
+      "Cifras tabulares y estados descritos con palabras.",
+      "Acciones principales oscuras y gráficos en teal.",
+      "Geist alojada en el proyecto."
+    ],
+    "rules": [
+      {
+        "name": "The Data Color Rule",
+        "body": "El color de una gráfica identifica los datos; no se repite como fondo de indicadores ni de navegación.",
+        "section": "colors"
+      },
+      {
+        "name": "The Scope Rule",
+        "body": "Cada conjunto de filtros se sitúa directamente sobre los resultados que modifica; su conteo corresponde a la selección.",
+        "section": "layout"
+      }
+    ],
+    "dos": [
+      "Do conservar la identidad por cédula, nombre y categoría en escritorio y móvil.",
+      "Do presentar las cifras reales desde las APIs y describir los datos ausentes.",
+      "Do usar el mismo foco visible en campos, enlaces y botones.",
+      "Do reservar la elevación a las superficies que flotan sobre el trabajo."
+    ],
+    "donts": [
+      "Don't convertir los indicadores en tarjetas con iconos de colores.",
+      "Don't utilizar información clínica o personas inventadas como decoración.",
+      "Don't ocultar categorías, unidades o diagnósticos al adaptar una lista al móvil.",
+      "Don't usar gradientes, vidrio, tipografía diminuta o animaciones de entrada en el trabajo diario."
+    ]
+  }
+}

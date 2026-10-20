@@ -1,43 +1,16 @@
 <?php
-require_once '../config/Database.php';
-
-header('Content-Type: application/json');
-
-try {
-    $db = Config\Database::getInstance()->getConnection();
-    
-    $status = isset($_GET['estado']) ? trim($_GET['estado']) : '';
-    
-    $query = "
-        SELECT 
-            c.id,
-            c.fecha_cita,
-            c.estado,
-            p.id as paciente_id,
-            p.cedula,
-            p.nombres,
-            p.apellidos,
-            cat.nombre AS categoria
-        FROM citas c
-        JOIN pacientes p ON c.paciente_id = p.id
-        JOIN categorias_institucionales cat ON p.categoria_id = cat.id
-    ";
-    
-    $params = [];
-    if (!empty($status)) {
-        $query .= " WHERE c.estado = ?";
-        $params[] = $status;
-    }
-    
-    // Si queremos ver las próximas citas, o podemos ordenar
-    $query .= " ORDER BY c.fecha_cita ASC";
-    
-    $stmt = $db->prepare($query);
-    $stmt->execute($params);
-    $citas = $stmt->fetchAll();
-    
-    echo json_encode(['success' => true, 'data' => $citas]);
-    
-} catch (Exception $e) {
-    echo json_encode(['success' => false, 'message' => 'Error al obtener las citas: ' . $e->getMessage()]);
-}
+declare(strict_types=1);
+require_once __DIR__ . '/../config/bootstrap.php';
+api_method('GET');
+$errors = [];
+$status = Config\Validation::text($_GET, 'estado', 20, $errors);
+if ($status !== '' && !in_array($status, ['Pendiente', 'Completada', 'Cancelada'], true)) $errors['estado'] = 'Seleccione un estado válido.';
+api_validate($errors);
+$query = 'SELECT c.id, c.fecha_cita, c.estado, p.id AS paciente_id, p.cedula, p.nombres, p.apellidos, cat.nombre AS categoria
+    FROM citas c JOIN pacientes p ON c.paciente_id = p.id JOIN categorias_institucionales cat ON p.categoria_id = cat.id';
+$params = [];
+if ($status !== '') { $query .= ' WHERE c.estado = ?'; $params[] = $status; }
+$query .= ' ORDER BY c.fecha_cita ASC, c.id ASC';
+$statement = api_db()->prepare($query);
+$statement->execute($params);
+api_json(['success' => true, 'data' => $statement->fetchAll()]);

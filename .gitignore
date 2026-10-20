@@ -1,0 +1,12 @@
+.env
+.env.*
+!.env.example
+.taste-skill/before-source/
+.taste-skill/before/
+.taste-skill/after/
+.taste-skill/inspect/
+.taste-skill/qa/
+.impeccable/review/
+storage/
+node_modules/
+*.log

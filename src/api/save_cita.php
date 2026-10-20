@@ -1,99 +1,61 @@
 <?php
-require_once '../config/Database.php';
+declare(strict_types=1);
+require_once __DIR__ . '/../config/bootstrap.php';
+use Config\Validation;
 
-header('Content-Type: application/json');
-
-if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
-    echo json_encode(['success' => false, 'message' => 'Método no permitido.']);
-    exit;
+api_method('POST');
+$errors = [];
+$patientId = null;
+if (isset($_POST['paciente_id']) && !in_array($_POST['paciente_id'], ['', '0', 0], true)) {
+    $patientId = Validation::positiveId($_POST['paciente_id']);
+    if ($patientId === null) $errors['paciente_id'] = 'Seleccione un paciente válido.';
 }
-
+$cedula = Validation::cedula(Validation::text($_POST, 'cedula', 40, $errors));
+if (!$patientId && !Validation::validCedula($cedula)) $errors['cedula'] = 'Indique una cédula válida (ej. V-12345678).';
+$value = Validation::text($_POST, 'fecha_cita', 19, $errors, true);
+$date = Validation::dateTime($value);
+if (!$date || $date <= new DateTimeImmutable()) $errors['fecha_cita'] = 'Indique una fecha y hora válidas en el futuro.';
+api_validate($errors);
+$db = api_db();
 try {
-    $db = Config\Database::getInstance()->getConnection();
-    
-    $paciente_id = isset($_POST['paciente_id']) ? (int)$_POST['paciente_id'] : 0;
-    $cedula = isset($_POST['cedula']) ? trim($_POST['cedula']) : '';
-    $cedula = strtoupper(preg_replace('/\s+/', '', $cedula));
-    
-    $fecha_cita = isset($_POST['fecha_cita']) ? trim($_POST['fecha_cita']) : '';
-    $errors = [];
-    
-    if (empty($fecha_cita)) {
-        $errors['fecha_cita'] = "La fecha y hora de la cita es obligatoria.";
-    } else {
-        // Validar que la fecha sea en el futuro
-        $timestamp_cita = strtotime($fecha_cita);
-        if (!$timestamp_cita) {
-            $errors['fecha_cita'] = "Formato de fecha no válido.";
-        } elseif ($timestamp_cita < time()) {
-            $errors['fecha_cita'] = "La fecha de la cita debe ser en el futuro.";
-        }
-    }
-
-    if ($paciente_id <= 0) {
-        if (empty($cedula)) {
-            $errors['cedula'] = "Debe seleccionar un paciente o ingresar una cédula.";
-        } elseif (!preg_match('/^[VEJGCPNvejgcpn]-[0-9]+$/', $cedula)) {
-            $errors['cedula'] = "El formato de cédula es inválido. Use letras permitidas (V, E, J, G, C, P, N) seguido de guion y números.";
-        }
-    }
-
-    if (!empty($errors)) {
-        echo json_encode(['success' => false, 'message' => 'Existen errores de validación', 'errors' => $errors]);
-        exit;
-    }
-    
     $db->beginTransaction();
-    
-    // Determinar el paciente_id
-    if ($paciente_id <= 0) {
-        // Buscar paciente por cédula
-        
-        // Buscar paciente por cédula
-        $stmtPaciente = $db->prepare("SELECT id FROM pacientes WHERE cedula = ?");
-        $stmtPaciente->execute([$cedula]);
-        $paciente = $stmtPaciente->fetch();
-        
-        if ($paciente) {
-            $paciente_id = $paciente['id'];
-        } else {
-            // Si el paciente no existe, podemos crearlo al vuelo si se envían nombres y categoría
-            $nombres = isset($_POST['nombres']) ? trim($_POST['nombres']) : '';
-            $apellidos = isset($_POST['apellidos']) ? trim($_POST['apellidos']) : '';
-            $categoria_id = isset($_POST['categoria']) ? trim($_POST['categoria']) : '';
-            
-            if (empty($nombres) || empty($apellidos) || empty($categoria_id)) {
-                throw new Exception("El paciente no está registrado. Por favor ingrese nombres, apellidos y categoría para registrarlo.");
-            }
-            
-            $stmtInsertPac = $db->prepare("INSERT INTO pacientes (cedula, nombres, apellidos, categoria_id) VALUES (?, ?, ?, ?) RETURNING id");
-            $stmtInsertPac->execute([$cedula, $nombres, $apellidos, $categoria_id]);
-            $paciente_id = $stmtInsertPac->fetchColumn();
+    if ($patientId === null) {
+        // Prevent simultaneous inline creation from racing before the patient exists.
+        $statement = $db->prepare('SELECT pg_advisory_xact_lock(hashtext(?))');
+        $statement->execute(['patient:' . $cedula]);
+        $statement = $db->prepare('SELECT id FROM pacientes WHERE cedula = ? FOR UPDATE');
+        $statement->execute([$cedula]);
+        $patientId = $statement->fetchColumn();
+        if (!$patientId) {
+            $names = Validation::text($_POST, 'nombres', 100, $errors, true);
+            $lastNames = Validation::text($_POST, 'apellidos', 100, $errors, true);
+            $categoryId = Validation::positiveId($_POST['categoria'] ?? null);
+            if (!$categoryId) $errors['categoria'] = 'Seleccione una categoría válida.';
+            api_validate($errors);
+            api_category($db, $categoryId);
+            $statement = $db->prepare('INSERT INTO pacientes (cedula, nombres, apellidos, categoria_id) VALUES (?, ?, ?, ?) ON CONFLICT (cedula) DO UPDATE SET cedula = EXCLUDED.cedula RETURNING id');
+            $statement->execute([$cedula, $names, $lastNames, $categoryId]);
+            $patientId = $statement->fetchColumn();
         }
     }
-    
-    // Verificar si ya tiene una cita pendiente para la misma hora/día para evitar duplicados
-    $stmtCheck = $db->prepare("
-        SELECT COUNT(*) FROM citas 
-        WHERE paciente_id = ? 
-          AND estado = 'Pendiente' 
-          AND ABS(EXTRACT(EPOCH FROM (fecha_cita - CAST(? AS TIMESTAMP)))) < 1800
-    ");
-    $stmtCheck->execute([$paciente_id, $fecha_cita]);
-    if ($stmtCheck->fetchColumn() > 0) {
-        throw new Exception("Este paciente ya tiene una cita pendiente programada en un rango cercano a esta hora.");
-    }
-    
-    // Insertar la cita
-    $stmtCita = $db->prepare("INSERT INTO citas (paciente_id, fecha_cita, estado) VALUES (?, ?, 'Pendiente')");
-    $stmtCita->execute([$paciente_id, $fecha_cita]);
-    
+    // Serialize appointment operations for this patient before checking the interval.
+    $statement = $db->prepare('SELECT id, cedula FROM pacientes WHERE id = ? FOR UPDATE');
+    $statement->execute([$patientId]);
+    $lockedPatient = $statement->fetch();
+    if (!$lockedPatient) throw new ApiException('El paciente no existe.', 404);
+    if ($cedula !== '' && $cedula !== $lockedPatient['cedula']) throw new ApiException('La cédula no corresponde al paciente seleccionado. Vuelva a buscarlo.', 409, ['cedula' => 'Revise el paciente seleccionado.']);
+    $appointmentDate = $date->format('Y-m-d H:i:s');
+    $statement = $db->prepare("SELECT id FROM citas WHERE paciente_id = ? AND estado = 'Pendiente'
+        AND fecha_cita > CAST(? AS TIMESTAMP) - INTERVAL '30 minutes'
+        AND fecha_cita < CAST(? AS TIMESTAMP) + INTERVAL '30 minutes' LIMIT 1");
+    $statement->execute([$patientId, $appointmentDate, $appointmentDate]);
+    if ($statement->fetchColumn()) throw new ApiException('El paciente ya tiene una cita pendiente a menos de 30 minutos de esta hora.', 409, ['fecha_cita' => 'Seleccione otra hora.']);
+    $statement = $db->prepare("INSERT INTO citas (paciente_id, fecha_cita, estado) VALUES (?, ?, 'Pendiente') RETURNING id");
+    $statement->execute([$patientId, $appointmentDate]);
+    $appointmentId = (int) $statement->fetchColumn();
     $db->commit();
-    echo json_encode(['success' => true, 'message' => 'La cita ha sido programada correctamente.']);
-    
-} catch (Exception $e) {
-    if (isset($db) && $db->inTransaction()) {
-        $db->rollBack();
-    }
-    echo json_encode(['success' => false, 'message' => $e->getMessage()]);
+    api_json(['success' => true, 'message' => 'La cita se programó correctamente.', 'cita_id' => $appointmentId, 'paciente_id' => (int) $patientId], 201);
+} catch (Throwable $error) {
+    if ($db->inTransaction()) $db->rollBack();
+    throw $error;
 }
