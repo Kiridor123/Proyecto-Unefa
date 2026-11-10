@@ -6,7 +6,8 @@ services:
     ports:
       - "${WEB_BIND_ADDRESS:-127.0.0.1}:${WEB_PORT:-8080}:80"
     volumes:
-      - ./src:/var/www/html
+      # Solo lectura: los adjuntos nuevos se guardan en el volumen medical_storage.
+      - ./src:/var/www/html:ro
       - ./docker/php/uploads.ini:/usr/local/etc/php/conf.d/uploads.ini:ro
       - medical_storage:/var/www/storage
     environment:
@@ -17,6 +18,11 @@ services:
       DB_PASSWORD: ${DB_PASSWORD:-unefa_secure_pass}
       APP_TIMEZONE: ${APP_TIMEZONE:-America/Caracas}
       UPLOAD_DIR: /var/www/storage/attachments
+      # Administrador inicial: solo se crea si la tabla de usuarios está vacía.
+      ADMIN_USER: ${ADMIN_USER:-admin}
+      ADMIN_PASSWORD: ${ADMIN_PASSWORD:-}
+      # 1 solo si un proxy inverso de confianza termina HTTPS delante de este contenedor.
+      TRUST_PROXY: ${TRUST_PROXY:-0}
     depends_on:
       db:
         condition: service_healthy

@@ -18,6 +18,9 @@ services:
       DB_PASSWORD: integration_only
       APP_TIMEZONE: America/Caracas
       UPLOAD_DIR: /var/www/storage/attachments
+      ADMIN_USER: admin
+      ADMIN_PASSWORD: integration_admin_only
+      TRUST_PROXY: "0"
     depends_on:
       db:
         condition: service_healthy

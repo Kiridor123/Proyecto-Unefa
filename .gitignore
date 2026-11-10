@@ -10,3 +10,10 @@
 storage/
 node_modules/
 *.log
+backups/
+# Subidas de prueba: solo se versionan los logos institucionales.
+src/uploads/*
+!src/uploads/logo_*
+
+# Archivos temporales de Microsoft Office
+~$*

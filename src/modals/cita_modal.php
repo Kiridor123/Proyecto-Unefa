@@ -24,7 +24,11 @@
                 <div class="field">
                     <label for="citaFecha">Fecha y hora <span aria-hidden="true">*</span></label>
                     <input type="datetime-local" name="fecha_cita" id="citaFecha" required>
-                    <p class="field-help">Los campos con * son obligatorios.</p>
+                </div>
+                <div class="field">
+                    <label for="citaMotivo">Motivo de la cita</label>
+                    <textarea name="motivo" id="citaMotivo" maxlength="500" rows="3" placeholder="Ej.: control de tensión arterial, revisión de resultados" aria-describedby="citaMotivoAyuda"></textarea>
+                    <p class="field-help" id="citaMotivoAyuda">Opcional. No incluya diagnósticos; máximo 500 caracteres. Los campos con * son obligatorios.</p>
                 </div>
             </form>
         </div>

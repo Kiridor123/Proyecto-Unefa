@@ -82,4 +82,81 @@ $result = RegistroInput::from(array_merge($clinical, ['motivo_consulta' => '']))
 check(isset($result['errors']['motivo_consulta']), 'required clinical data enforced');
 $result = RegistroInput::from(array_merge($clinical, ['sexo' => '<script>']));
 check(isset($result['errors']['sexo']), 'patient enum enforced');
+
+// Límites de reposo (BE-6), fecha mínima de consulta (BE-7) e idempotencia (BE-11).
+$result = RegistroInput::from(array_merge($clinical, ['inicio_reposo' => '1900-01-01', 'fin_reposo' => '9999-12-31']));
+check(isset($result['errors']['fin_reposo']) || isset($result['errors']['inicio_reposo']), 'absurd rest range rejected');
+// Días inclusivos, como el impreso: del 15/01/2026 al 15/01/2027 son 366 días.
+$result = RegistroInput::from(array_merge($clinical, ['inicio_reposo' => '2026-01-15', 'fin_reposo' => '2027-01-15']));
+check(isset($result['errors']['fin_reposo']), 'rest of 366 days (both ends included) rejected');
+$result = RegistroInput::from(array_merge($clinical, ['inicio_reposo' => '2026-01-15', 'fin_reposo' => '2027-01-14']));
+check(!$result['errors'], 'rest of exactly 365 days (both ends included) accepted');
+check(RegistroInput::restDays(new DateTimeImmutable('2026-01-15'), new DateTimeImmutable('2026-01-15')) === 1, 'single-day rest counts as one day');
+$result = RegistroInput::from(array_merge($clinical, ['inicio_reposo' => '2026-01-07', 'fin_reposo' => '2026-01-10']));
+check(isset($result['errors']['inicio_reposo']), 'rest starting more than 7 days before the encounter rejected');
+$result = RegistroInput::from(array_merge($clinical, ['inicio_reposo' => '2026-01-08', 'fin_reposo' => '2026-01-10']));
+check(!$result['errors'], 'rest starting 7 days before the encounter accepted');
+$result = RegistroInput::from(array_merge($clinical, ['inicio_reposo' => '2026-02-15', 'fin_reposo' => '2026-02-20']));
+check(isset($result['errors']['inicio_reposo']), 'rest starting more than 30 days after the encounter rejected');
+$result = RegistroInput::from(array_merge($clinical, ['fecha_nacimiento' => '', 'fecha_circunstancia' => '0001-01-01']));
+check(isset($result['errors']['fecha_circunstancia']), 'encounter in year 0001 rejected');
+$result = RegistroInput::from(array_merge($clinical, ['fecha_nacimiento' => '', 'fecha_circunstancia' => '1899-12-31']));
+check(isset($result['errors']['fecha_circunstancia']), 'encounter before 1900 rejected');
+$result = RegistroInput::from(array_merge($clinical, ['solicitud_id' => '3F2504E0-4F89-41D3-9A0C-0305E82C3301']));
+check(!$result['errors'] && $result['solicitud_id'] === '3f2504e0-4f89-41d3-9a0c-0305e82c3301', 'request UUID normalized');
+$result = RegistroInput::from(array_merge($clinical, ['solicitud_id' => 'not-a-uuid']));
+check(isset($result['errors']['solicitud_id']), 'malformed request UUID rejected');
+$result = RegistroInput::from(array_merge($basic, ['solicitud_id' => 'not-a-uuid']));
+check(!$result['errors'] && $result['solicitud_id'] === null, 'patient-only registration ignores the request UUID');
+check(RegistroInput::from(array_merge($basic, ['confirmar_identidad' => '1']))['confirmar_identidad'] === true, 'identity confirmation flag parsed');
+
+// Validación reutilizable para editar consultas (FN-3).
+$errors = [];
+$edit = RegistroInput::consultation(['fecha_circunstancia' => '2026-01-15', 'motivo_consulta' => 'Control', 'enfermedad_actual' => 'Evolución',
+    'diagnostico' => 'Sano', 'plan_tratamiento' => 'Alta', 'vital_ta' => '120/80'], '2000-01-01', $errors);
+check(!$errors && $edit['vital_ta'] === '120/80' && $edit['fecha_inicio_reposo'] === null, 'consultation validator usable on its own');
+check(array_diff(RegistroInput::CONSULTATION_COLUMNS, array_keys($edit)) === [], 'consultation validator returns every editable column');
+$errors = [];
+RegistroInput::consultation(['fecha_circunstancia' => '2026-01-15', 'motivo_consulta' => 'Control', 'enfermedad_actual' => 'x',
+    'diagnostico' => 'x', 'plan_tratamiento' => 'x'], '2026-02-01', $errors);
+check(isset($errors['fecha_circunstancia']), 'consultation validator enforces birth date');
+
+// Al corregir una consulta antigua sin tocar el reposo ni la fecha, no se aplican las reglas nuevas
+// de ventana y duración (BE-UPD-1); si cambia alguna de las tres fechas, sí.
+$legacy = ['fecha_circunstancia' => '2025-03-20', 'fecha_inicio_reposo' => '2025-03-01', 'fecha_fin_reposo' => '2025-03-30'];
+$legacyInput = ['fecha_circunstancia' => '2025-03-20', 'motivo_consulta' => 'Control', 'enfermedad_actual' => 'Evolución',
+    'diagnostico' => 'Diagnóstico corregido', 'plan_tratamiento' => 'Alta', 'inicio_reposo' => '2025-03-01', 'fin_reposo' => '2025-03-30'];
+$errors = [];
+RegistroInput::consultation($legacyInput, '2000-01-01', $errors);
+check(isset($errors['inicio_reposo']), 'new consultation still enforces the rest window');
+$errors = [];
+RegistroInput::consultation($legacyInput, '2000-01-01', $errors, $legacy);
+check(!$errors, 'editing a legacy consultation keeps its issued rest unchanged');
+$errors = [];
+RegistroInput::consultation(array_merge($legacyInput, ['fin_reposo' => '2025-03-31']), '2000-01-01', $errors, $legacy);
+check(isset($errors['inicio_reposo']), 'changing the rest dates re-applies the rest window');
+$errors = [];
+RegistroInput::consultation(array_merge($legacyInput, ['inicio_reposo' => '2025-03-30', 'fin_reposo' => '2025-03-01']), '2000-01-01', $errors,
+    ['fecha_circunstancia' => '2025-03-20', 'fecha_inicio_reposo' => '2025-03-30', 'fecha_fin_reposo' => '2025-03-01']);
+check(isset($errors['fin_reposo']), 'structural rest checks still apply to unchanged legacy rests');
+check(in_array('antecedente_quirurgico', RegistroInput::CLINICAL_PATIENT_FIELDS, true) && !in_array('telefono', RegistroInput::CLINICAL_PATIENT_FIELDS, true), 'clinical patient fields separated from contact data');
+
+// Identidad (BE-5).
+check(RegistroInput::normalizeName('  José   Pérez ') === 'jose perez', 'name normalization collapses spaces and accents');
+$stored = ['nombres' => 'José Luis', 'apellidos' => 'Pérez', 'sexo' => 'Masculino'];
+check(!RegistroInput::identityDiffers($stored, ['nombres' => 'jose  luis', 'apellidos' => 'PEREZ', 'sexo' => 'Masculino']), 'cosmetic identity edits are not a mismatch');
+check(RegistroInput::identityDiffers($stored, ['nombres' => 'María', 'apellidos' => 'Pérez', 'sexo' => 'Masculino']), 'different name is a mismatch');
+check(RegistroInput::identityDiffers($stored, ['nombres' => 'José Luis', 'apellidos' => 'Pérez', 'sexo' => 'Femenino']), 'different sex is a mismatch');
+check(!RegistroInput::identityDiffers(['nombres' => 'Ana', 'apellidos' => 'Díaz', 'sexo' => null], ['nombres' => 'Ana', 'apellidos' => 'Díaz', 'sexo' => 'Femenino']), 'completing a missing sex is not a mismatch');
+
+// Citas (BE-7).
+if (!class_exists('ApiException')) {
+    final class ApiException extends RuntimeException {}
+}
+require_once $sourceRoot . '/config/Citas.php';
+check(cita_fecha_problema(null) !== null, 'missing appointment date rejected');
+check(cita_fecha_problema(new DateTimeImmutable('-1 minute')) !== null, 'past appointment rejected');
+check(cita_fecha_problema(new DateTimeImmutable('+1 day')) === null, 'appointment tomorrow accepted');
+check(cita_fecha_problema(new DateTimeImmutable('+2 years +1 day')) !== null, 'appointment beyond two years rejected');
+check(cita_fecha_problema(Validation::dateTime('9999-12-31T10:00')) !== null, 'appointment in year 9999 rejected');
 echo "Backend validation: {$checks} assertions passed.\n";

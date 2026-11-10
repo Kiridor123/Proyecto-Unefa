@@ -2,13 +2,16 @@
 declare(strict_types=1);
 require_once __DIR__ . '/../config/bootstrap.php';
 api_method('GET');
+api_require('clinica.ver');
 $id = api_id($_GET['id'] ?? null);
 $db = api_db();
 $statement = $db->prepare('SELECT p.*, c.nombre AS categoria FROM pacientes p JOIN categorias_institucionales c ON p.categoria_id = c.id WHERE p.id = ?');
 $statement->execute([$id]);
 $patient = $statement->fetch();
 if (!$patient) throw new ApiException('El paciente no existe.', 404);
-$statement = $db->prepare('SELECT * FROM consultas WHERE paciente_id = ? ORDER BY fecha_circunstancia DESC, fecha_registro DESC, id DESC');
+$statement = $db->prepare('SELECT c.*, u.nombre_completo AS medico_nombre, u.registro_profesional AS medico_registro,
+        (SELECT COUNT(*) FROM consulta_versiones v WHERE v.consulta_id = c.id)::int AS version_actual
+    FROM consultas c LEFT JOIN usuarios u ON u.id = c.medico_id WHERE c.paciente_id = ? ORDER BY c.fecha_circunstancia DESC, c.fecha_registro DESC, c.id DESC');
 $statement->execute([$id]);
 $consultations = $statement->fetchAll();
 // One attachment query for the entire history, avoiding an extra query per visit.
@@ -21,6 +24,7 @@ foreach ($statement->fetchAll() as $attachment) {
 }
 foreach ($consultations as &$consultation) $consultation['archivos'] = $attachments[$consultation['id']] ?? [];
 unset($consultation);
-$statement = $db->prepare('SELECT id, fecha_cita, estado FROM citas WHERE paciente_id = ? ORDER BY fecha_cita DESC, id DESC');
+$statement = $db->prepare('SELECT id, fecha_cita, estado, motivo FROM citas WHERE paciente_id = ? ORDER BY fecha_cita DESC, id DESC');
 $statement->execute([$id]);
+api_audit('ver_expediente', 'paciente', $id);
 api_json(['success' => true, 'data' => ['paciente' => $patient, 'consultas' => $consultations, 'citas' => $statement->fetchAll()]]);

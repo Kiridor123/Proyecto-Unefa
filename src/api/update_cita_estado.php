@@ -1,12 +1,15 @@
 <?php
 declare(strict_types=1);
 require_once __DIR__ . '/../config/bootstrap.php';
+require_once __DIR__ . '/../config/Citas.php';
 
 api_method('POST');
-$id = api_id($_POST['cita_id'] ?? null, 'cita_id');
+api_require('citas.gestionar');
+$input = api_input();
+$id = api_id($input['cita_id'] ?? null, 'cita_id');
 $errors = [];
-$status = Config\Validation::text($_POST, 'estado', 20, $errors, true);
-if (!in_array($status, ['Pendiente', 'Completada', 'Cancelada'], true)) $errors['estado'] = 'Seleccione un estado válido.';
+$status = Config\Validation::text($input, 'estado', 20, $errors, true);
+if (!in_array($status, CITA_ESTADOS, true)) $errors['estado'] = 'Seleccione un estado válido.';
 api_validate($errors);
 $db = api_db();
 try {
@@ -22,8 +25,11 @@ try {
     $statement->execute([$id]);
     $current = $statement->fetchColumn();
     if ($current !== $status && $current !== 'Pendiente') throw new ApiException('La cita ya fue cerrada. Programe una nueva cita si necesita otra atención.', 409);
-    $statement = $db->prepare('UPDATE citas SET estado = ? WHERE id = ?');
+    $statement = $db->prepare('UPDATE citas SET estado = ?, actualizado_en = now() WHERE id = ?');
     $statement->execute([$status, $id]);
+    if ($current !== $status) {
+        api_audit('cambiar_estado_cita', 'cita', $id, ['paciente_id' => (int) $patientId, 'estado_anterior' => $current, 'estado_nuevo' => $status]);
+    }
     $db->commit();
     api_json(['success' => true, 'message' => 'El estado de la cita se actualizó correctamente.']);
 } catch (Throwable $error) {

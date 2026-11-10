@@ -1,180 +1,165 @@
 <?php
+declare(strict_types=1);
+
 define('API_HTML_RESPONSE', true);
 require_once __DIR__ . '/../config/bootstrap.php';
+require_once __DIR__ . '/print_common.php';
+require_once __DIR__ . '/../config/RegistroInput.php';
+
+use Config\RegistroInput;
+
+const REPOSO_DIAGNOSTICO_MAX_CARACTERES = 600;
+const REPOSO_DIAGNOSTICO_MAX_LINEAS = 8;
+
 api_method('GET');
+api_require('clinica.ver');
 
 $consulta_id = api_id($_GET['consulta_id'] ?? null, 'consulta_id');
 
-try {
-    $db = Config\Database::getInstance()->getConnection();
-    
-    $stmt = $db->prepare("
-        SELECT c.*, p.cedula, p.nombres, p.apellidos, p.fecha_nacimiento, cat.nombre AS categoria
-        FROM consultas c
-        JOIN pacientes p ON c.paciente_id = p.id
-        JOIN categorias_institucionales cat ON p.categoria_id = cat.id
-        WHERE c.id = ?
-    ");
-    $stmt->execute([$consulta_id]);
-    $consulta = $stmt->fetch();
-    
-    if (!$consulta) {
-        throw new ApiException('La consulta no existe.', 404);
-    }
-    
-    // Calcular días de reposo
-    $dias_reposo = 0;
-    if ($consulta['fecha_inicio_reposo'] && $consulta['fecha_fin_reposo']) {
-        $start = new DateTime($consulta['fecha_inicio_reposo']);
-        $end = new DateTime($consulta['fecha_fin_reposo']);
-        if ($end < $start) throw new ApiException('Revise las fechas de este reposo antes de imprimirlo.', 422);
-        $interval = $start->diff($end);
-        $dias_reposo = $interval->days + 1; // Inclusive
-    } else {
-        throw new ApiException('Esta consulta no tiene un reposo registrado.', 422);
-    }
-    
-    // Formatear fechas en español
-    $meses = [
-        1 => 'Enero', 2 => 'Febrero', 3 => 'Marzo', 4 => 'Abril', 5 => 'Mayo', 6 => 'Junio',
-        7 => 'Julio', 8 => 'Agosto', 9 => 'Septiembre', 10 => 'Octubre', 11 => 'Noviembre', 12 => 'Diciembre'
-    ];
-    
-    $hoy = new DateTime();
-    $dia_hoy = $hoy->format('d');
-    $mes_hoy = $meses[(int)$hoy->format('m')];
-    $anio_hoy = $hoy->format('Y');
+$db = api_db();
+$stmt = $db->prepare("
+    SELECT c.id, c.paciente_id, c.fecha_registro, c.fecha_circunstancia, c.resumen, c.diagnostico,
+           c.fecha_inicio_reposo, c.fecha_fin_reposo,
+           p.cedula, p.nombres, p.apellidos, p.fecha_nacimiento, cat.nombre AS categoria,
+           u.nombre_completo AS medico_nombre, u.registro_profesional AS medico_registro
+    FROM consultas c
+    JOIN pacientes p ON c.paciente_id = p.id
+    JOIN categorias_institucionales cat ON p.categoria_id = cat.id
+    LEFT JOIN usuarios u ON u.id = c.medico_id
+    WHERE c.id = ?
+");
+$stmt->execute([$consulta_id]);
+$consulta = $stmt->fetch();
 
-    $fecha_inicio_f = date('d/m/Y', strtotime($consulta['fecha_inicio_reposo']));
-    $fecha_fin_f = date('d/m/Y', strtotime($consulta['fecha_fin_reposo']));
-
-} catch (Throwable $e) {
-    throw $e;
+if (!$consulta) {
+    throw new ApiException('La consulta no existe.', 404);
 }
+
+$inicio = print_date($consulta['fecha_inicio_reposo']);
+$fin = print_date($consulta['fecha_fin_reposo']);
+if (!$inicio || !$fin) {
+    throw new ApiException('Esta consulta no tiene un reposo registrado.', 422);
+}
+if ($fin < $inicio) {
+    throw new ApiException('Revise las fechas de este reposo antes de imprimirlo: la fecha final es anterior a la inicial.', 422);
+}
+$dias_reposo = RegistroInput::restDays($inicio, $fin); // Ambos días incluidos, mismo criterio que al guardar.
+if ($dias_reposo > RegistroInput::REPOSO_DURACION_MAXIMA) {
+    throw new ApiException('Este reposo supera la duración máxima permitida (' . RegistroInput::REPOSO_DURACION_MAXIMA . ' días). Corrija la consulta antes de imprimirlo.', 422);
+}
+// Coherencia con la fecha de la consulta (mismas reglas que al registrar), para datos antiguos.
+$fechaConsulta = print_date($consulta['fecha_circunstancia']);
+if ($fechaConsulta) {
+    $minimo = $fechaConsulta->modify('-' . RegistroInput::REPOSO_DIAS_ANTES . ' days');
+    $maximo = $fechaConsulta->modify('+' . RegistroInput::REPOSO_DIAS_DESPUES . ' days');
+    if ($inicio < $minimo || $inicio > $maximo) {
+        throw new ApiException('La fecha de inicio del reposo no es coherente con la fecha de la consulta (' . $fechaConsulta->format('d/m/Y') . '). Corrija la consulta antes de imprimirlo.', 422);
+    }
+}
+
+$emision = print_fecha_emision($consulta);
+$medico = print_medico($consulta);
+$diagnostico = print_first($consulta['diagnostico'], $consulta['resumen']);
+// El reposo debe caber en una hoja (PR-14): el diagnóstico se recorta por caracteres y por
+// líneas, y el texto largo usa una letra más compacta. El texto completo está en el informe.
+$diagnostico_texto = trim(str_replace(["\r\n", "\r"], "\n", (string) ($diagnostico ?? '')));
+$diagnostico_recortado = false;
+$lineas = explode("\n", $diagnostico_texto);
+if (count($lineas) > REPOSO_DIAGNOSTICO_MAX_LINEAS) {
+    $diagnostico_texto = rtrim(implode("\n", array_slice($lineas, 0, REPOSO_DIAGNOSTICO_MAX_LINEAS)));
+    $diagnostico_recortado = true;
+}
+if (mb_strlen($diagnostico_texto, 'UTF-8') > REPOSO_DIAGNOSTICO_MAX_CARACTERES) {
+    $diagnostico_texto = rtrim(mb_substr($diagnostico_texto, 0, REPOSO_DIAGNOSTICO_MAX_CARACTERES, 'UTF-8'));
+    $diagnostico_recortado = true;
+}
+if ($diagnostico_recortado) $diagnostico_texto .= '…';
+$diagnostico_compacto = $diagnostico_recortado || mb_strlen($diagnostico_texto, 'UTF-8') > 350;
+$texto_dias = print_numero_letras($dias_reposo) . ' (' . $dias_reposo . ') ' . ($dias_reposo === 1 ? 'día' : 'días');
+
+api_audit('imprimir_reposo', 'consulta', (int) $consulta['id']);
+
+print_page_start('Reposo médico - ' . $consulta['cedula'], [
+    'boton' => 'Imprimir reposo',
+    'margen' => '2cm 2.4cm',
+    'css' => '
+        .reposo-cuerpo { font-size: 11.5pt; line-height: 1.6; text-align: justify; }
+        .reposo-cuerpo p { margin: 0 0 12px; }
+        .datos-paciente { border: 1px solid #555; padding: 8px 12px; margin: 0 0 12px; }
+        .datos-paciente div + div { margin-top: 3px; }
+        .diagnostico { border: 1px solid #555; padding: 8px 12px; min-height: 70px; }
+        .diagnostico.compacto { font-size: 10pt; line-height: 1.35; text-align: left; }
+        .diagnostico-nota { font-size: 9pt; color: #444; margin: 4px 0 0 !important; text-align: left; }
+        .reposo-cierre { break-inside: avoid; page-break-inside: avoid; }
+        .expedicion { text-align: right; margin-top: 16px !important; }
+        .reposo-firmas { margin-top: 32px; }
+    ',
+]);
 ?>
-<!DOCTYPE html>
-<html lang="es">
-<head>
-    <meta charset="UTF-8">
-    <title>Reposo Médico - <?php echo htmlspecialchars($consulta['cedula']); ?></title>
-    <!-- Tailwind CSS -->
-    <link rel="stylesheet" href="../css/tailwind.css">
-    <style>
-        @media print {
-            body {
-                background: white;
-                color: black;
-                padding: 0;
-                margin: 0;
-            }
-            .no-print {
-                display: none;
-            }
-            .print-area {
-                border: none;
-                box-shadow: none;
-                margin: 0;
-                padding: 1.5cm;
-                width: 100%;
-                min-height: auto;
-            }
-        }
-        body {
-            font-family: 'Arial', sans-serif;
-        }
-    </style>
-</head>
-<body class="bg-slate-100 min-h-screen flex flex-col items-center p-4 sm:p-8">
-    <!-- Floating Print Button -->
-    <div class="no-print mb-6 flex gap-3">
-        <button onclick="window.print()" class="bg-blue-600 hover:bg-blue-700 text-white font-semibold px-5 py-2.5 rounded-xl shadow-md transition flex items-center gap-2 text-sm">
-            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 17h2a2 2 0 002-2v-4a2 2 0 00-2-2H5a2 2 0 00-2 2v4a2 2 0 002 2h2m2 4h6a2 2 0 002-2v-4a2 2 0 00-2-2H9a2 2 0 00-2 2v4a2 2 0 002 2zm8-12V5a2 2 0 00-2-2H9a2 2 0 00-2 2v4h10z"></path></svg>
-            Imprimir Reposo
-        </button>
-        <button onclick="window.close()" class="bg-slate-200 hover:bg-slate-300 text-slate-700 font-semibold px-5 py-2.5 rounded-xl transition text-sm">
-            Cerrar
-        </button>
-    </div>
+        <?php print_header([
+            'República Bolivariana de Venezuela',
+            'Ministerio del Poder Popular para la Defensa',
+            PRINT_INSTITUCION,
+            'Vicerrectorado Región Los Llanos',
+            'Núcleo Portuguesa — Extensión Acarigua',
+        ], print_logo('unefa'), print_logo('mppd')); ?>
 
-    <!-- Paper Container -->
-    <div class="print-area bg-white w-full max-w-[21cm] min-h-[29.7cm] p-12 border border-slate-300 shadow-xl flex flex-col justify-between">
-        
-        <!-- Header -->
-        <div>
-            <div class="flex justify-between items-center border-b border-slate-900 pb-4 mb-8">
-                <img src="../uploads/logo_unefa_1.png" class="h-16 w-auto" alt="Logo MPPD">
-                <div class="text-center font-bold text-[10px] sm:text-xs uppercase tracking-tight leading-tight flex-1 px-4 text-slate-800">
-                    República Bolivariana de Venezuela<br>
-                    Ministerio del Poder Popular para la Defensa<br>
-                    Universidad Nacional Experimental Politécnica<br>
-                    de la Fuerza Armada Bolivariana<br>
-                    Vicerrectorado Región Los Llanos<br>
-                    Núcleo Portuguesa Extensión Acarigua
-                </div>
-                <img src="../uploads/logo_unefa_2.png" class="h-16 w-auto" alt="Logo UNEFA">
+        <h1 class="doc-titulo">Reposo médico</h1>
+
+        <div class="reposo-cuerpo">
+            <p>
+                Quien suscribe, médico del Consultorio Médico de la <?= print_e(PRINT_INSTITUCION) ?> (UNEFA),
+                Núcleo Portuguesa, Extensión Acarigua, hace constar que el/la ciudadano/a:
+            </p>
+
+            <div class="datos-paciente">
+                <div><span class="etq">Nombres y apellidos:</span> <?= print_e($consulta['nombres'] . ' ' . $consulta['apellidos']) ?></div>
+                <div><span class="etq">Cédula de identidad:</span> <?= print_e($consulta['cedula']) ?></div>
+                <div><span class="etq">Categoría:</span> <?= print_val($consulta['categoria']) ?></div>
             </div>
 
-            <!-- Title -->
-            <div class="text-center my-10">
-                <h1 class="text-xl sm:text-2xl font-bold tracking-widest text-slate-900 underline decoration-double decoration-1 underline-offset-8">REPOSO MÉDICO</h1>
-            </div>
+            <p>
+                fue evaluado/a en consulta el <span class="fuerte"><?= print_fecha_corta($consulta['fecha_circunstancia']) ?></span>
+                y presenta una condición clínica que amerita reposo médico por un lapso de
+                <span class="fuerte"><?= print_e($texto_dias) ?></span><?= $dias_reposo === 1 ? '' : ' consecutivos' ?>,
+                <?php if ($dias_reposo === 1): ?>
+                    el día <span class="fuerte"><?= print_fecha_corta($inicio) ?></span>.
+                <?php else: ?>
+                    desde el <span class="fuerte"><?= print_fecha_corta($inicio) ?></span>
+                    hasta el <span class="fuerte"><?= print_fecha_corta($fin) ?></span>, ambos inclusive.
+                <?php endif; ?>
+            </p>
 
-            <!-- Content -->
-            <div class="space-y-6 text-sm sm:text-base text-slate-800 leading-relaxed text-justify mt-8">
-                <p>
-                    Quien suscribe, Médico de la Universidad Nacional Experimental Politécnica de la Fuerza Armada Bolivariana (UNEFA) - Núcleo Portuguesa, Extensión Acarigua, hace constar que el/la ciudadano/a:
-                </p>
-
-                <div class="bg-slate-50 p-4 rounded-xl border border-slate-200 space-y-2 font-medium">
-                    <div><span class="text-slate-500 font-semibold">Nombres y Apellidos:</span> <?php echo htmlspecialchars($consulta['nombres'] . ' ' . $consulta['apellidos']); ?></div>
-                    <div><span class="text-slate-500 font-semibold">Cédula de Identidad:</span> <?php echo htmlspecialchars($consulta['cedula']); ?></div>
-                    <div><span class="text-slate-500 font-semibold">Categoría:</span> <?php echo htmlspecialchars($consulta['categoria']); ?></div>
-                </div>
-
-                <p>
-                    Presenta una condición clínica evaluada en consulta que amerita reposo médico por un lapso de 
-                    <span class="font-bold text-slate-900"><?php echo $dias_reposo; ?> días</span> 
-                    consecutivos, a partir del <span class="font-bold text-slate-900"><?php echo $fecha_inicio_f; ?></span> 
-                    hasta el <span class="font-bold text-slate-900"><?php echo $fecha_fin_f; ?></span> (inclusive).
-                </p>
-
-                <div class="mt-4">
-                    <span class="font-bold text-slate-900 block mb-1">Diagnóstico / Resumen Clínico:</span>
-                    <div class="border border-slate-200 rounded-xl p-4 min-h-[100px] bg-slate-50 italic text-slate-700">
-                        <?php echo nl2br(htmlspecialchars($consulta['diagnostico'] ?: $consulta['resumen'])); ?>
-                    </div>
-                </div>
-
-                <p class="pt-4 text-right">
-                    Se expide la presente constancia a petición de la parte interesada en Acarigua, a los <?php echo $dia_hoy; ?> días del mes de <?php echo $mes_hoy; ?> del año <?php echo $anio_hoy; ?>.
-                </p>
-            </div>
+            <p class="etq" style="margin-bottom: 4px;">Diagnóstico / resumen clínico:</p>
+            <div class="diagnostico<?= $diagnostico_compacto ? ' compacto' : '' ?>"><?= print_text($diagnostico_texto, 'No registrado') ?></div>
+            <?php if ($diagnostico_recortado): ?>
+                <p class="diagnostico-nota">Texto abreviado para esta constancia. El diagnóstico completo consta en el informe médico de la consulta.</p>
+            <?php endif; ?>
         </div>
 
-        <!-- Footer / Signatures -->
-        <div class="mt-20 border-t border-slate-200 pt-10">
-            <div class="grid grid-cols-2 gap-12 text-center text-xs font-semibold text-slate-700">
-                <div class="flex flex-col items-center">
-                    <div class="w-48 border-b border-slate-400 h-16 mb-2"></div>
-                    <span>SELLO MÉDICO</span>
-                </div>
-                <div class="flex flex-col items-center">
-                    <div class="w-48 border-b border-slate-400 h-16 mb-2"></div>
-                    <span>FIRMA DE DIRECTOR/A</span>
-                </div>
+        <!-- La línea de expedición y las firmas nunca se separan en hojas distintas. -->
+        <div class="reposo-cierre">
+        <div class="reposo-cuerpo">
+            <p class="expedicion">
+                Se expide la presente constancia a petición de la parte interesada en Acarigua, a <?= print_e(print_fecha_larga($emision)) ?>.
+            </p>
+        </div>
+
+        <div class="firmas reposo-firmas">
+            <div class="firma">
+                <div class="linea"></div>
+                <span>FIRMA Y SELLO DEL MÉDICO TRATANTE</span>
+                <?php if ($medico !== null): ?>
+                    <span class="detalle">Médico tratante: <?= print_e($medico) ?></span>
+                <?php else: ?>
+                    <span class="detalle">Médico tratante: ______________________</span>
+                <?php endif; ?>
+            </div>
+            <div class="firma">
+                <div class="linea"></div>
+                <span>FIRMA DE DIRECTOR/A</span>
             </div>
         </div>
-        
-    </div>
-
-    <script>
-        // Disparar la impresión automáticamente al cargar la página
-        window.onload = function() {
-            // Un pequeño retardo para asegurar que los estilos de Tailwind y logos carguen completamente
-            setTimeout(function() {
-                window.print();
-            }, 500);
-        };
-    </script>
-</body>
-</html>
+        </div>
+<?php
+print_page_end(print_reimpresion($emision));

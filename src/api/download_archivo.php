@@ -3,8 +3,9 @@ declare(strict_types=1);
 require_once __DIR__ . '/../config/bootstrap.php';
 require_once __DIR__ . '/../config/Attachments.php';
 api_method('GET');
+api_require('clinica.ver');
 $id = api_id($_GET['id'] ?? null);
-$statement = api_db()->prepare('SELECT ruta_archivo, tipo_archivo FROM archivos_adjuntos WHERE id = ?');
+$statement = api_db()->prepare('SELECT ruta_archivo, tipo_archivo, consulta_id FROM archivos_adjuntos WHERE id = ?');
 $statement->execute([$id]);
 $attachment = $statement->fetch();
 if (!$attachment) throw new ApiException('El archivo no existe.', 404);
@@ -13,6 +14,7 @@ if (!$path || !is_readable($path)) throw new ApiException('El archivo no está d
 $mime = (new finfo(FILEINFO_MIME_TYPE))->file($path);
 $extensions = ['image/jpeg' => 'jpg', 'image/png' => 'png', 'application/pdf' => 'pdf'];
 if (!isset($extensions[$mime]) || $mime !== $attachment['tipo_archivo']) throw new ApiException('El archivo no está disponible para su descarga.', 404);
+api_audit('descargar_adjunto', 'consulta', (int) $attachment['consulta_id'], ['adjunto_id' => $id]);
 header('Content-Type: ' . $mime);
 header('Content-Length: ' . filesize($path));
 header('Content-Disposition: attachment; filename="adjunto-' . $id . '.' . $extensions[$mime] . '"');

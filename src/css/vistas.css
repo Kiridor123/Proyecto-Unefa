@@ -1,0 +1,135 @@
+/* Vistas de agenda, panel, reportes y administración (W3b).
+   Se carga después de app.css y reutiliza sus tokens (--surface, --border, --muted…). */
+
+/* ---------- Controles compartidos ---------- */
+.view-chip { display: inline-flex; align-items: center; gap: 7px; min-height: 40px; padding: 8px 13px; border: 1px solid var(--control); border-radius: var(--radius-control); background: var(--surface); color: var(--muted); font-size: 13px; font-weight: 400; line-height: 1.4; white-space: nowrap; }
+.view-chip:hover { color: var(--text); border-color: #9baaaa; background: var(--raised); }
+.view-chip[aria-pressed="true"] { color: var(--text); background: var(--active); border-color: #9baaaa; font-weight: 500; }
+.view-chip-count { display: inline-flex; align-items: center; justify-content: center; min-width: 22px; padding: 0 6px; border-radius: 4px; background: var(--raised); color: var(--muted); font-size: 11px; font-weight: 500; line-height: 20px; font-variant-numeric: tabular-nums; }
+.view-chip-count:empty, .view-chip-count.hidden { display: none; }
+.view-chip[aria-pressed="true"] .view-chip-count { background: var(--surface); color: var(--text); }
+.view-chip-count.view-chip-alert { background: #fff5de; color: #7b5819; }
+
+.list-pager { display: flex; align-items: center; justify-content: space-between; gap: 12px 16px; flex-wrap: wrap; padding: 14px 22px; border-top: 1px solid var(--rule); background: var(--surface); }
+.list-pager.hidden { display: none; }
+.list-pager-summary { color: var(--muted); font-size: 12px; font-variant-numeric: tabular-nums; }
+.list-pager .btn { min-height: 40px; }
+
+.state-panel.state-compact { min-height: 0; padding: 28px 22px 30px; }
+.state-panel.state-compact > i { font-size: 22px; }
+.state-panel.is-error > i { color: var(--negative); }
+
+.status-overdue { background: #fbecec; color: var(--negative); }
+.data-table tbody tr.is-muted td { color: var(--muted); }
+
+/* ---------- Agenda de citas ---------- */
+.citas-views { display: flex; flex-wrap: wrap; gap: 8px; padding: 18px 22px 0; }
+.citas-toolbar { flex-wrap: wrap; }
+.date-filter-field { width: 180px; }
+.data-table tbody tr.day-row th { padding: 9px 20px; background: var(--raised); border-bottom: 1px solid var(--rule); color: var(--text); font-size: 12px; font-weight: 500; text-align: left; white-space: normal; }
+.data-table tbody tr.day-row:hover { background: transparent; }
+.data-table tbody tr.is-overdue td:first-child { box-shadow: inset 3px 0 0 #d8a23b; }
+.record-day-heading { margin: 0; padding: 9px 18px; background: var(--raised); border-bottom: 1px solid var(--rule); color: var(--text); font-size: 12px; font-weight: 500; line-height: 1.5; letter-spacing: normal; }
+.appointment-patient { display: flex; flex-direction: column; align-items: flex-start; min-width: 0; }
+.appointment-reason { max-width: 46ch; overflow-wrap: anywhere; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
+.record-card .appointment-reason { max-width: none; }
+.record-status { display: inline-flex; flex-wrap: wrap; justify-content: flex-end; gap: 4px; }
+.citas-table td:nth-child(5) .status-badge + .status-badge { margin-left: 4px; }
+#citaMotivo { min-height: 76px; }
+
+/* ---------- Panel: jornada de hoy ---------- */
+.today-grid { display: grid; grid-template-columns: minmax(0,1.4fr) minmax(0,1fr); gap: 20px; align-items: start; }
+.today-grid.is-single { grid-template-columns: minmax(0,1fr); }
+.today-panel { display: flex; flex-direction: column; overflow: hidden; }
+.today-panel[hidden] { display: none; }
+.today-panel > .panel-heading { border-bottom: 1px solid var(--rule); }
+.today-panel > .panel-heading .btn-text { flex-shrink: 0; }
+.today-list { list-style: none; margin: 0; padding: 0 22px; }
+.today-list.hidden { display: none; }
+.today-row { display: grid; grid-template-columns: auto minmax(0,1fr) auto; align-items: center; gap: 14px; min-height: 60px; padding: 12px 0; border-bottom: 1px solid var(--rule); }
+.today-row:last-child { border-bottom: 0; }
+.today-time { min-width: 44px; color: var(--text); font-size: 13px; font-weight: 500; }
+.today-row.is-overdue .today-time { color: var(--warning); }
+.today-body { display: flex; flex-direction: column; align-items: flex-start; gap: 2px; min-width: 0; }
+.today-body .table-secondary { margin-top: 0; overflow-wrap: anywhere; }
+.today-body .status-badge { margin-top: 4px; }
+.today-row .btn { min-height: 36px; padding: 6px 11px; font-size: 12px; }
+.today-days { display: inline-flex; align-items: center; justify-content: center; min-width: 72px; padding: 3px 8px; border-radius: 4px; background: #fff5de; color: #7b5819; font-size: 11px; font-weight: 500; line-height: 1.5; white-space: nowrap; }
+.today-days.is-today { background: #fbecec; color: var(--negative); }
+.today-more { padding: 4px 14px 14px; }
+.today-more.hidden { display: none; }
+
+/* ---------- Reportes de morbilidad ---------- */
+.report-shortcuts { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; padding: 0 22px 20px; }
+.report-shortcuts > span { color: var(--muted); font-size: 12px; margin-right: 4px; }
+.stale-notice { display: flex; align-items: center; gap: 12px; padding: 12px 22px; background: #fff5de; color: #6b4c14; border-bottom: 1px solid #f1e2bd; }
+.stale-notice.hidden { display: none; }
+.stale-notice > i { font-size: 19px; flex-shrink: 0; }
+.stale-notice p { flex: 1; font-size: 13px; line-height: 1.6; }
+.stale-notice .btn { flex-shrink: 0; }
+#morbilidadResults { transition: opacity .16s; }
+#morbilidadResults.is-stale { opacity: .55; }
+
+/* ---------- Administración ---------- */
+.admin-tabs { display: flex; gap: 4px; border-bottom: 1px solid var(--border); overflow-x: auto; scrollbar-width: none; }
+.admin-tab { display: inline-flex; align-items: center; gap: 8px; min-height: 44px; padding: 10px 14px; margin-bottom: -1px; border: 0; border-bottom: 2px solid transparent; background: transparent; color: var(--muted); font-size: 14px; white-space: nowrap; }
+.admin-tab i { font-size: 18px; }
+.admin-tab:hover { color: var(--text); }
+.admin-tab[aria-selected="true"] { color: var(--text); border-bottom-color: var(--primary); font-weight: 500; }
+.admin-tab[hidden] { display: none; }
+.admin-tab:focus-visible { outline-offset: -2px; }
+.list-panel.hidden { display: none; }
+.admin-form { display: flex; flex-direction: column; gap: 18px; }
+.admin-fieldset { margin: 0; padding: 14px 16px 16px; border: 1px solid var(--border); border-radius: var(--radius-card); min-width: 0; }
+.admin-fieldset legend { padding: 0 6px; margin-left: -6px; color: var(--text); font-size: 13px; font-weight: 500; }
+.admin-fieldset > .field-help { margin-top: 0; margin-bottom: 14px; }
+.admin-fieldset .field + .field { margin-top: 14px; }
+.checkbox-field .checkbox-label { display: inline-flex; align-items: center; gap: 10px; min-height: 40px; margin: 0; color: var(--text); font-size: 13px; font-weight: 500; cursor: pointer; }
+.checkbox-field input[type="checkbox"] { display: inline-block; width: 18px; height: 18px; min-height: 0; margin: 0; padding: 0; accent-color: var(--accent); flex-shrink: 0; cursor: pointer; }
+.checkbox-field input[type="checkbox"]:disabled, .checkbox-field input[type="checkbox"]:disabled + * { cursor: not-allowed; }
+.checkbox-field .field-help { margin-top: 2px; }
+.audit-toolbar { flex-wrap: wrap; }
+.audit-toolbar .field { width: 200px; }
+.audit-toolbar .field:nth-child(3), .audit-toolbar .field:nth-child(4) { width: 160px; }
+.audit-actions { flex-wrap: nowrap; }
+.audit-table td { padding-top: 14px; padding-bottom: 14px; vertical-align: top; }
+.audit-detail { max-width: 360px; color: var(--muted); font-size: 12px; overflow-wrap: anywhere; }
+.record-card .audit-detail { max-width: none; }
+#usuarioModal { z-index: 60; }
+#usuarioModalContent { box-shadow: 0 18px 60px rgba(24,37,40,.16); }
+
+/* ---------- Adaptación ---------- */
+@media (max-width: 1023px) {
+    .today-grid { grid-template-columns: minmax(0,1fr); gap: 16px; }
+}
+@media (max-width: 767px) {
+    .citas-views { padding: 16px 18px 0; }
+    .view-chip { min-height: 44px; flex: 1 1 auto; justify-content: center; }
+    .date-filter-field { width: 100%; }
+    .list-pager { flex-direction: column; align-items: stretch; padding: 14px 18px; }
+    .list-pager .record-actions { display: grid; grid-template-columns: 1fr 1fr; }
+    .list-pager .btn { min-height: 44px; }
+    .record-day-heading { padding: 9px 18px; }
+    .record-status { flex-direction: column; align-items: flex-end; }
+    .today-list { padding: 0 18px; }
+    .today-row { grid-template-columns: auto minmax(0,1fr); gap: 6px 12px; }
+    .today-row > .btn { grid-column: 2; justify-self: start; min-height: 44px; }
+    .today-panel > .panel-heading .btn-text { margin: -8px -8px -8px 0; }
+    .today-more { padding: 4px 10px 12px; }
+    .report-shortcuts { padding: 0 18px 18px; }
+    .report-shortcuts > span { width: 100%; }
+    .report-shortcuts .view-chip { flex: 0 1 auto; }
+    .report-actions { flex-wrap: wrap; }
+    .report-actions .btn:first-child { flex: 1 1 100%; }
+    .report-actions .btn:not(:first-child) { flex: 1 1 0; }
+    .stale-notice { flex-wrap: wrap; padding: 12px 18px; }
+    .stale-notice .btn { width: 100%; }
+    .admin-tab { flex: 1 0 auto; justify-content: center; }
+    .audit-toolbar .field, .audit-toolbar .field:nth-child(3), .audit-toolbar .field:nth-child(4) { width: 100%; }
+    .audit-actions { display: grid; grid-template-columns: 1fr 1fr; width: 100%; }
+    .checkbox-field .checkbox-label { min-height: 44px; }
+    .checkbox-field input[type="checkbox"] { width: 20px; height: 20px; min-height: 0; font-size: inherit; }
+}
+@media (prefers-reduced-motion: reduce) {
+    #morbilidadResults { transition: none; }
+}

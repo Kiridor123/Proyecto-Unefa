@@ -8,7 +8,10 @@
   "description": "Local frontend assets for the PHP application",
   "scripts": {
     "build": "node scripts/build-assets.mjs",
-    "test:api": "node tests/api-smoke.mjs"
+    "test": "npm run test:api && npm run test:backend",
+    "test:api": "node tests/api-smoke.mjs",
+    "test:backend": "docker compose -p salud-unefa-test -f docker-compose.test.yml exec -T web php /var/www/tests/backend-validation.php",
+    "test:env": "docker compose -p salud-unefa-test -f docker-compose.test.yml up -d --build --wait"
   },
   "devDependencies": {
     "@phosphor-icons/web": "2.1.1",

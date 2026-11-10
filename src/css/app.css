@@ -51,6 +51,8 @@ h1, h2, h3, p { margin: 0; }
 h1 { font-size: 24px; line-height: 1.25; font-weight: 500; letter-spacing: -.025em; }
 h2, h3 { font-size: 16px; line-height: 1.4; font-weight: 500; letter-spacing: -.015em; }
 .hidden { display: none; }
+/* El atributo hidden (permisos, secciones del formulario) gana a cualquier display de componente. */
+[hidden] { display: none !important; }
 .sr-only { position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px; overflow: hidden; clip: rect(0,0,0,0); white-space: nowrap; border: 0; }
 .skip-link { position: fixed; top: 12px; left: 12px; z-index: 100; padding: 12px 16px; border-radius: 6px; background: var(--primary); color: white; transform: translateY(-160%); }
 .skip-link:focus { transform: none; }
@@ -193,7 +195,7 @@ h2, h3 { font-size: 16px; line-height: 1.4; font-weight: 500; letter-spacing: -.
 .record-details dt { color: var(--muted); font-size: 11px; }
 .record-details dd { font-size: 13px; margin: 3px 0 0; }
 .record-details .full-width { grid-column: 1 / -1; }
-.inline-error-text { font-size: 12px !important; color: var(--negative) !important; }
+.inline-error-text, .file-error-text { font-size: 12px !important; line-height: 1.6; color: var(--negative) !important; margin-top: 7px; }
 .modal-enter { opacity: 0; transform: translateY(8px); }
 .modal-enter-active { opacity: 1; transform: translateY(0); transition: opacity .18s var(--ease-standard), transform .18s var(--ease-standard); }
 .modal-leave-active { opacity: 0; transform: translateY(8px); transition: opacity .14s, transform .14s; }
@@ -264,7 +266,144 @@ body.modal-open, body.sidebar-open { overflow: hidden; }
 .swal2-container { font-family: "Geist", system-ui, sans-serif; }
 .swal2-popup { border-radius: 10px !important; }
 .swal2-confirm { background: var(--primary) !important; border-radius: var(--radius-control) !important; }
-@media (min-width: 768px) { .app-sidebar { transform: none; } .record-list { display: none !important; } }
+/* ---------- Menú de usuario ---------- */
+.user-menu-wrap { position: relative; flex-shrink: 0; }
+.user-menu-button { display: flex; align-items: center; gap: 10px; min-height: 44px; padding: 4px 10px 4px 4px; border: 1px solid transparent; border-radius: var(--radius-control); background: transparent; color: var(--text); text-align: left; }
+.user-menu-button:hover, .user-menu-button[aria-expanded="true"] { background: var(--active); }
+.user-menu-button > i { font-size: 14px; color: var(--muted); }
+.user-avatar { display: inline-flex; align-items: center; justify-content: center; width: 34px; height: 34px; flex-shrink: 0; border-radius: 50%; background: var(--raised); border: 1px solid var(--border); color: var(--muted); font-size: 12px; font-weight: 500; }
+.user-menu-identity { display: flex; flex-direction: column; min-width: 0; line-height: 1.35; }
+.user-menu-name { max-width: 22ch; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: 13px; font-weight: 500; }
+.user-menu-identity small { color: var(--muted); font-size: 11px; }
+.user-menu { position: absolute; top: calc(100% + 6px); right: 0; z-index: 45; min-width: 232px; padding: 6px; background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius-card); box-shadow: 0 12px 36px rgba(24,37,40,.14); }
+.user-menu-header { padding: 10px 10px 12px; margin-bottom: 4px; border-bottom: 1px solid var(--rule); }
+.user-menu-header p { font-size: 13px; font-weight: 500; overflow-wrap: anywhere; }
+.user-menu-header small { color: var(--muted); font-size: 12px; }
+.user-menu-item { display: flex; align-items: center; gap: 10px; width: 100%; min-height: 40px; padding: 8px 10px; border: 0; border-radius: var(--radius-control); background: transparent; color: var(--text); font-size: 13px; text-align: left; }
+.user-menu-item i { font-size: 18px; color: var(--muted); }
+.user-menu-item:hover, .user-menu-item:focus-visible { background: var(--raised); }
+.user-menu-item:focus-visible { outline-offset: -2px; }
+
+/* ---------- Paginación ---------- */
+.pager { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 14px 22px; border-top: 1px solid var(--rule); }
+.pager-info { color: var(--muted); font-size: 12px; font-variant-numeric: tabular-nums; }
+.pager-actions { display: flex; gap: 8px; }
+[aria-busy="true"] .data-table tbody, [aria-busy="true"] .record-list { opacity: .6; transition: opacity .16s; }
+
+/* ---------- Formulario clínico ---------- */
+fieldset.clinical-section, fieldset.edit-notice { min-width: 0; margin: 0; padding: 0; border: 0; }
+fieldset.clinical-section { border-bottom: 1px solid var(--border); }
+.form-grid { display: grid; gap: 16px 18px; }
+.form-grid-2 { grid-template-columns: repeat(2,minmax(0,1fr)); }
+.form-grid-3 { grid-template-columns: repeat(3,minmax(0,1fr)); }
+.form-grid-4 { grid-template-columns: repeat(4,minmax(0,1fr)); }
+.form-grid-5 { grid-template-columns: repeat(5,minmax(0,1fr)); }
+.form-span-full { grid-column: 1 / -1; }
+.form-span-2 { grid-column: span 2; }
+.field textarea.textarea-compact { min-height: 64px; }
+.required-mark { color: var(--negative); font-weight: 500; }
+.clinical-subheading { display: flex; align-items: baseline; flex-wrap: wrap; gap: 4px 8px; }
+.clinical-subheading i { align-self: center; font-size: 17px; color: var(--muted); }
+.clinical-subheading .field-help { margin: 0; font-weight: 400; }
+.section-help { margin: 0 0 16px; }
+.clinical-section-title > span { display: flex; flex-wrap: wrap; align-items: baseline; gap: 2px 0; }
+.clinical-section-state { flex-shrink: 0; }
+.clinical-section-toggle .section-caret { font-size: 15px; transition: transform .18s var(--ease-standard); }
+.clinical-section.is-open .section-caret { transform: rotate(180deg); }
+.section-summary { color: var(--muted); font-size: 12px; font-weight: 400; }
+.section-status { font-size: 11px; font-weight: 500; line-height: 1.5; white-space: nowrap; }
+.section-status:empty { display: none; }
+.section-status.is-pending { padding: 2px 7px; border-radius: 4px; background: #fff5de; color: #7b5819; }
+.section-status.is-complete { padding: 2px 7px; border-radius: 4px; background: #e9f4ee; color: #236346; }
+.commitment-field { display: flex; flex-direction: column; gap: 10px; padding: 12px 14px; border: 1px solid var(--border); border-radius: var(--radius-control); background: #fafcfc; }
+.commitment-text { font-size: 13px; line-height: 1.6; color: var(--text); }
+.field .check-row { display: flex; align-items: center; gap: 10px; min-height: 40px; margin: 0; color: var(--text); font-size: 13px; font-weight: 400; cursor: pointer; }
+.field .check-row input { width: 18px; height: 18px; min-height: 0; flex-shrink: 0; padding: 0; accent-color: var(--accent); }
+.clinical-attachment { margin-top: 20px; }
+.field input[type="file"] { padding: 7px 8px; background: #fafcfc; }
+.lookup-status { margin-top: 6px; }
+.edit-notice { display: flex; flex-direction: column; gap: 16px; padding: 16px; margin-bottom: 8px; border: 1px solid var(--border); border-radius: var(--radius-card); background: #fafcfc; }
+.edit-notice-identity { display: flex; gap: 12px; align-items: flex-start; }
+.edit-notice-identity > i { font-size: 20px; color: var(--accent); padding-top: 2px; }
+.edit-notice-title { font-size: 14px; font-weight: 500; }
+.edit-notice-identity .field-help { margin-top: 2px; }
+.clinical-footer #btnGuardarSoloPaciente { margin-right: auto; }
+
+/* ---------- Historia clínica (panel lateral) ---------- */
+.drawer-data { display: flex; flex-direction: column; gap: 24px; }
+.drawer-section .record-details { margin-top: 0; }
+.consulta-details { margin-top: 12px; border-top: 1px solid var(--rule); }
+.consulta-details > summary { display: flex; align-items: center; gap: 8px; width: fit-content; min-height: 40px; padding: 8px 0; color: var(--accent); font-size: 13px; font-weight: 500; cursor: pointer; list-style: none; }
+.consulta-details > summary::-webkit-details-marker { display: none; }
+.consulta-details > summary::before { content: ""; width: 7px; height: 7px; border-right: 1.5px solid currentColor; border-bottom: 1.5px solid currentColor; transform: rotate(-45deg); transition: transform .18s var(--ease-standard); }
+.consulta-details[open] > summary::before { transform: rotate(45deg); }
+.consulta-details > summary:hover { text-decoration: underline; text-underline-offset: 3px; }
+.consulta-details .record-details { margin-top: 4px; }
+.consulta-details dd { white-space: pre-line; overflow-wrap: anywhere; }
+.consulta-extras { margin-top: 14px; padding-top: 12px; border-top: 1px dashed var(--border); }
+.consulta-extras:empty { display: none; }
+.consulta-extras .record-details { margin-top: 0; }
+.version-heading { margin-top: 14px; font-size: 12px; font-weight: 500; color: var(--text); }
+.version-list { margin: 8px 0 0; padding: 0; list-style: none; }
+.version-list li { display: flex; flex-direction: column; gap: 2px; padding: 8px 0; border-bottom: 1px solid var(--rule); font-size: 13px; }
+.version-list li:last-child { border-bottom: 0; }
+.version-meta { color: var(--muted); font-size: 12px; font-variant-numeric: tabular-nums; }
+.clinical-entry .record-identity .status-badge { flex-shrink: 0; }
+
+/* ---------- Diálogos ---------- */
+.swal-form { display: flex; flex-direction: column; gap: 14px; text-align: left; }
+.swal-form .field-help { margin-top: 5px; }
+.swal-copy { font-size: 14px; line-height: 1.6; color: var(--muted); }
+.identity-compare { width: 100%; margin-top: 14px; border-collapse: collapse; font-size: 13px; text-align: left; }
+.identity-compare th, .identity-compare td { padding: 8px 10px; border-bottom: 1px solid var(--rule); vertical-align: top; overflow-wrap: anywhere; }
+.identity-compare thead th { color: var(--muted); font-size: 12px; font-weight: 400; }
+.identity-compare tbody th { color: var(--muted); font-weight: 500; white-space: nowrap; }
+.identity-compare tr.is-different td { color: var(--negative); font-weight: 500; }
+.swal2-deny { background: var(--surface) !important; color: var(--text) !important; border: 1px solid var(--control) !important; border-radius: var(--radius-control) !important; }
+.swal2-cancel { border-radius: var(--radius-control) !important; }
+
+/* ---------- Carga ---------- */
+.loading-bar { position: relative; overflow: hidden; }
+.loading-bar::after { content: ""; position: absolute; inset: 0; width: 40%; background: #bfd0d0; border-radius: inherit; animation: loading-slide 1.1s var(--ease-standard) infinite; }
+@keyframes loading-slide { from { transform: translateX(-100%); } to { transform: translateX(260%); } }
+
+/* ---------- Inicio de sesión ---------- */
+.login-body { min-height: 100vh; background: var(--ground); }
+.login-layout { display: grid; grid-template-columns: minmax(0,1fr) minmax(0,1fr); min-height: 100vh; }
+.login-brand { display: flex; flex-direction: column; justify-content: space-between; gap: 40px; padding: 48px 56px; border-right: 1px solid var(--border); }
+.login-brand-copy { max-width: 46ch; }
+.login-kicker { color: var(--accent); font-size: 12px; font-weight: 500; margin-bottom: 14px; }
+.login-brand-copy h1 { font-size: 32px; line-height: 1.2; letter-spacing: -.03em; }
+.login-brand-copy p:last-child { margin-top: 16px; color: var(--muted); font-size: 14px; line-height: 1.7; }
+.login-points { display: flex; flex-direction: column; margin: 0; padding: 0; list-style: none; border-top: 1px solid var(--border); }
+.login-points li { display: flex; align-items: center; gap: 12px; padding: 14px 0; border-bottom: 1px solid var(--border); font-size: 13px; }
+.login-points i { font-size: 19px; color: var(--muted); }
+.login-panel { display: flex; flex-direction: column; justify-content: center; align-items: center; gap: 24px; padding: 48px 24px; background: var(--surface); }
+.login-card { width: 100%; max-width: 380px; }
+.login-card-heading h2 { font-size: 22px; letter-spacing: -.02em; }
+.login-card-heading p { margin-top: 6px; color: var(--muted); font-size: 13px; line-height: 1.6; }
+.login-form { display: flex; flex-direction: column; gap: 18px; margin-top: 24px; }
+.login-form .field input { min-height: 44px; font-size: 15px; }
+.password-field input { padding-right: 46px; }
+.password-toggle { position: absolute; top: 50%; right: 3px; transform: translateY(-50%); display: inline-flex; align-items: center; justify-content: center; width: 40px; height: 40px; border: 0; border-radius: var(--radius-control); background: transparent; color: var(--muted); }
+.password-toggle:hover { color: var(--text); background: var(--raised); }
+.password-toggle i { font-size: 19px; }
+.caps-hint { color: var(--warning); }
+.login-submit { width: 100%; min-height: 46px; margin-top: 4px; font-size: 14px; }
+.login-submit i { transition: transform .16s var(--ease-standard); }
+.login-submit:hover:not(:disabled) i { transform: translateX(2px); }
+.login-notice { display: flex; align-items: flex-start; gap: 10px; margin-top: 20px; padding: 12px 14px; border-radius: var(--radius-control); font-size: 13px; line-height: 1.55; }
+.login-notice i { font-size: 18px; flex-shrink: 0; }
+.login-notice.is-warning { background: #fff5de; color: #6b4a12; }
+.login-notice.is-positive { background: #e9f4ee; color: #1f5a40; }
+.login-notice.is-negative { background: #fbeceb; color: #8a2c30; }
+.login-help { margin-top: 22px; padding-top: 18px; border-top: 1px solid var(--rule); color: var(--muted); font-size: 12px; line-height: 1.7; }
+.login-footer { display: flex; gap: 16px; color: var(--muted); font-size: 11px; }
+.login-footer span:first-child { font-weight: 600; letter-spacing: .02em; }
+.login-noscript { position: fixed; inset: auto 16px 16px; padding: 12px 16px; border-radius: var(--radius-control); background: var(--primary); color: #fff; text-align: center; }
+
+@media (min-width: 768px) { .record-list { display: none !important; } }
+@media (min-width: 1024px) { .sidebar-overlay { display: none !important; } }
 @media (max-width: 1199px) {
     :root { --page-gutter: 24px; --sidebar-width: 220px; }
     .sidebar-brand { padding-left: 20px; padding-right: 16px; }
@@ -280,14 +419,11 @@ body.modal-open, body.sidebar-open { overflow: hidden; }
 @media (max-width: 1023px) {
     .app-main { margin-left: 0; }
     .app-sidebar { transform: translateX(-100%); width: 280px; }
-    .app-sidebar.translate-x-0 { transform: translateX(0); }
+    .app-sidebar.is-open { transform: none; box-shadow: 0 18px 60px rgba(24,37,40,.16); }
     .sidebar-close, .mobile-menu { display: inline-flex !important; }
     .page-shell { padding-top: 24px; }
     .section-intro > p { max-width: 52ch; }
     .analytics-grid { grid-template-columns: 1.2fr 1fr; }
-}
-@media (min-width: 768px) and (max-width: 1023px) {
-    #sidebarOverlay.md\:hidden:not(.hidden) { display: block; }
 }
 @media (max-width: 767px) {
     :root { --page-gutter: 18px; }
@@ -365,6 +501,30 @@ body.modal-open, body.sidebar-open { overflow: hidden; }
     .field textarea { font-size: 16px; }
     .drawer-body .record-actions { gap: 8px; }
     .drawer-body .record-actions .btn { min-height: 44px; }
+}
+@media (max-width: 1023px) {
+    .form-grid-4, .form-grid-5 { grid-template-columns: repeat(3,minmax(0,1fr)); }
+    .login-layout { grid-template-columns: 1fr; min-height: 0; }
+    .login-brand { gap: 24px; padding: 28px 24px; border-right: 0; border-bottom: 1px solid var(--border); }
+    .login-brand-copy h1 { font-size: 24px; }
+    .login-points { display: none; }
+    .login-panel { justify-content: flex-start; padding: 32px 18px 40px; }
+}
+@media (max-width: 767px) {
+    .form-grid-2, .form-grid-3, .form-grid-4, .form-grid-5 { grid-template-columns: 1fr; }
+    .form-span-2 { grid-column: auto; }
+    .clinical-section-toggle { align-items: flex-start; }
+    .clinical-section-state { padding-top: 2px; }
+    .clinical-footer #btnGuardarSoloPaciente { margin-right: 0; }
+    .user-menu-identity, .user-menu-button > i { display: none; }
+    .user-menu-button { padding: 4px; }
+    .user-avatar { width: 36px; height: 36px; }
+    .pager { flex-direction: column; align-items: stretch; padding: 14px 18px; }
+    .pager-actions .btn { flex: 1; }
+    .record-details { grid-template-columns: 1fr; }
+    .login-brand { padding: 22px 18px; }
+    .login-brand-copy p:last-child { display: none; }
+    .login-form .field input { font-size: 16px; }
 }
 @media (prefers-reduced-motion: reduce) {
     html { scroll-behavior: auto; }
