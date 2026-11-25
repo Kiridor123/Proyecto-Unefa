@@ -11,7 +11,13 @@ $consulta_id = api_id($_GET['consulta_id'] ?? null, 'consulta_id');
 
 $db = api_db();
 $stmt = $db->prepare("
-    SELECT c.*, p.cedula, p.nombres, p.apellidos, p.fecha_nacimiento, p.sexo, p.telefono, p.direccion,
+    SELECT c.id, c.paciente_id, c.fecha_registro, c.fecha_circunstancia, c.resumen,
+           c.motivo_consulta, c.enfermedad_actual, c.diagnostico, c.plan_tratamiento,
+           c.vital_ta, c.vital_fc, c.vital_fr, c.vital_spo2, c.vital_peso_talla,
+           c.fisico_piel, c.fisico_cabeza, c.fisico_cuello, c.fisico_torax,
+           c.fisico_abdomen, c.fisico_extremidades, c.fisico_neurologico,
+           c.laboratorios, c.pendiente,
+           p.cedula, p.nombres, p.apellidos, p.fecha_nacimiento, p.sexo, p.telefono, p.direccion,
            p.carrera, p.semestre, p.nivel_educativo, cat.nombre AS categoria,
            u.nombre_completo AS medico_nombre, u.registro_profesional AS medico_registro
     FROM consultas c
@@ -60,28 +66,30 @@ print_page_start('Informe médico - ' . $consulta['cedula'], [
     'margen' => '1.4cm 1.8cm',
     'css' => '
         .informe { font-size: 10pt; }
-        .informe h2 { font-size: 10pt; text-transform: uppercase; margin: 9px 0 5px; padding-bottom: 2px; border-bottom: 1px solid #555; break-after: avoid; page-break-after: avoid; }
+        .informe h2 {
+            font-size: 9.5pt; text-transform: uppercase; letter-spacing: .03em; color: #0f2c59;
+            margin: 10px 0 5px; padding: 2px 0 3px; border-bottom: 1.5px solid #163a70;
+            break-after: avoid; page-break-after: avoid;
+        }
         .rejilla { display: grid; grid-template-columns: 1fr 1fr; gap: 3px 20px; }
         .rejilla .ancho { grid-column: 1 / -1; }
         .bloque { margin-bottom: 6px; }
         .bloque .texto { padding-left: 8px; text-align: justify; }
         .vitales { width: 100%; border-collapse: collapse; table-layout: fixed; text-align: center; break-inside: avoid; page-break-inside: avoid; }
-        .vitales th, .vitales td { border: 1px solid #555; padding: 3px 4px; }
-        .vitales th { font-size: 8pt; text-transform: uppercase; background: #e5e7eb; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+        .vitales th, .vitales td { border: 1px solid #475569; padding: 3px 4px; }
+        .vitales th {
+            font-size: 8pt; text-transform: uppercase; background: #edf2f8; color: #0f2c59;
+            -webkit-print-color-adjust: exact; print-color-adjust: exact;
+        }
         .vitales td { font-weight: 700; }
         .fecha-consulta { text-align: center; margin: -6px 0 6px; font-size: 10pt; }
+        .informe-cierre { break-inside: avoid; page-break-inside: avoid; }
         .emision { margin-top: 14px; text-align: right; font-size: 9pt; }
-        .informe-firmas { margin-top: 30px; }
+        .informe-firmas { margin-top: 16px; }
     ',
 ]);
 ?>
-        <?php print_header([
-            'República Bolivariana de Venezuela',
-            'Ministerio del Poder Popular para la Defensa',
-            PRINT_INSTITUCION,
-            'Vicerrectorado Región Los Llanos',
-            'Núcleo Portuguesa — Extensión Acarigua',
-        ], print_logo('unefa'), print_logo('mppd')); ?>
+        <?php print_header_institucional(); ?>
 
         <h1 class="doc-titulo">Informe médico</h1>
         <p class="fecha-consulta"><span class="etq">Fecha de la consulta:</span> <?= print_fecha_corta($consulta['fecha_circunstancia']) ?></p>
@@ -166,32 +174,14 @@ print_page_start('Informe médico - ' . $consulta['cedula'], [
                         <div class="texto"><?= print_text($consulta['pendiente']) ?></div>
                     </div>
                 <?php endif; ?>
-                <?php if (!print_blank($consulta['fecha_inicio_reposo']) && !print_blank($consulta['fecha_fin_reposo'])): ?>
-                    <div class="bloque">
-                        <span class="etq">Reposo indicado:</span>
-                        del <?= print_fecha_corta($consulta['fecha_inicio_reposo']) ?> al <?= print_fecha_corta($consulta['fecha_fin_reposo']) ?>.
-                    </div>
-                <?php endif; ?>
             </section>
 
-            <p class="emision">
-                Documento emitido en el Consultorio Médico UNEFA — Extensión Acarigua, el <?= print_e(print_fecha_larga($emision)) ?>.
-            </p>
-        </div>
+            <div class="informe-cierre">
+                <p class="emision">
+                    Documento emitido en el Consultorio Médico UNEFA — Extensión Acarigua, el <?= print_e(print_fecha_larga($emision)) ?>.
+                </p>
 
-        <div class="firmas informe-firmas">
-            <div class="firma">
-                <div class="linea"></div>
-                <span>SELLO MÉDICO</span>
-            </div>
-            <div class="firma">
-                <div class="linea"></div>
-                <span>FIRMA DEL MÉDICO TRATANTE</span>
-                <?php if ($medico !== null): ?>
-                    <span class="detalle">Médico tratante: <?= print_e($medico) ?></span>
-                <?php else: ?>
-                    <span class="detalle">Médico tratante: ______________________</span>
-                <?php endif; ?>
+                <?php print_firmas_recuadros($medico, true, 'informe-firmas'); ?>
             </div>
         </div>
 <?php

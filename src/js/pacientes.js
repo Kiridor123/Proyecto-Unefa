@@ -35,19 +35,33 @@ function statusBadge(estado) {
     return `<span class="status-badge">${escapeHTML(estado || 'Sin estado')}</span>`;
 }
 
+let pacientesSearchTimer = null;
+const PACIENTES_SEARCH_MAX = 100;
+
+function sanitizePacientesSearch(value) {
+    return String(value ?? '')
+        .replace(/[\t\r\n]+/g, ' ')
+        .replace(/[\x00-\x1F\x7F]+/g, '')
+        .replace(/\s+/g, ' ')
+        .trim()
+        .slice(0, PACIENTES_SEARCH_MAX);
+}
+
 /* ---------- Directorio con búsqueda y paginación en el servidor (FE-4) ---------- */
 function pacientesQuery() {
     const params = new URLSearchParams();
-    const query = String(document.getElementById('filterCedula')?.value || '').trim();
+    const query = sanitizePacientesSearch(document.getElementById('filterCedula')?.value);
     const category = document.getElementById('filterCategoria')?.value || '';
     if (query) params.set('q', query);
-    if (category) params.set('categoria_id', category);
+    if (/^[1-9]\d{0,9}$/.test(category)) params.set('categoria_id', category);
     params.set('pagina', String(pacientesPage));
     params.set('por_pagina', String(PACIENTES_POR_PAGINA));
     return params;
 }
 async function loadPacientes() {
     if (!can('pacientes.ver')) return;
+    clearTimeout(pacientesSearchTimer);
+    pacientesSearchTimer = null;
     const version = ++pacientesRequestVersion;
     const loader = document.getElementById('tableLoader');
     const table = document.getElementById('pacientesTableWrap');
@@ -87,7 +101,11 @@ async function loadPacientes() {
         setVisible(cards, true);
     } catch (error) {
         if (error.name === 'AbortError' || version !== pacientesRequestVersion) return;
-        showBlockError('pacientesError', loader, error.message, loadPacientes);
+        if (error.status === 422) {
+            showNotification('warning', error.message || 'Revise los criterios de búsqueda.');
+        } else {
+            showBlockError('pacientesError', loader, error.message, loadPacientes);
+        }
     } finally {
         if (version === pacientesRequestVersion) {
             setVisible(loader, false);
@@ -96,13 +114,23 @@ async function loadPacientes() {
     }
 }
 function filterPacientesLocally(rows) {
-    const query = normalizeSearch(document.getElementById('filterCedula')?.value);
+    const query = normalizeSearch(sanitizePacientesSearch(document.getElementById('filterCedula')?.value));
+    const tokens = query ? query.split(/\s+/).filter(Boolean).slice(0, 6) : [];
     const category = document.getElementById('filterCategoria')?.value || '';
-    return rows.filter(patient =>
-        normalizeSearch(`${patient.cedula} ${patient.nombres} ${patient.apellidos}`).includes(query) &&
-        (!category || String(patient.categoria_id) === category));
+    return rows.filter(patient => {
+        if (category && String(patient.categoria_id) !== category) return false;
+        if (!tokens.length) return true;
+        const haystack = normalizeSearch(`${patient.nombres ?? ''} ${patient.apellidos ?? ''}`);
+        const cedulaNorm = String(patient.cedula ?? '').toUpperCase().replace(/[\s.-]+/g, '');
+        return tokens.every(token => {
+            const cedulaToken = token.toUpperCase().replace(/[\s.-]+/g, '');
+            return haystack.includes(token) || (Boolean(cedulaToken) && /^[A-Z0-9]+$/.test(cedulaToken) && cedulaNorm.includes(cedulaToken));
+        });
+    });
 }
 function buscarPacientes() {
+    clearTimeout(pacientesSearchTimer);
+    pacientesSearchTimer = null;
     pacientesPage = 1;
     return loadPacientes();
 }
@@ -113,38 +141,93 @@ function cambiarPaginaPacientes(delta) {
     pacientesPage = next;
     loadPacientes().then(() => document.getElementById('patientsTitle')?.scrollIntoView({ block: 'start' }));
 }
-function patientActionButton(action, id, label, icon, primary = false) {
-    return `<button type="button" class="btn ${primary ? 'btn-primary' : 'btn-secondary'}" data-action="${action}" data-id="${Number(id)}"><i class="ph ${icon}" aria-hidden="true"></i>${escapeHTML(label)}</button>`;
+function createPatientActionButton(action, id, label, icon, primary = false) {
+    const button = document.createElement('button');
+    button.type = 'button';
+    button.className = `btn ${primary ? 'btn-primary' : 'btn-secondary'}`;
+    button.dataset.action = action;
+    button.dataset.id = String(Number(id));
+    if (icon) {
+        const symbol = document.createElement('i');
+        symbol.className = `ph ${icon}`;
+        symbol.setAttribute('aria-hidden', 'true');
+        button.append(symbol);
+    }
+    button.append(document.createTextNode(label));
+    return button;
 }
-function patientActionsHTML(patient) {
+function createPatientActionsNode(patient) {
     const id = patient.id;
-    const actions = [];
-    if (can('clinica.editar')) actions.push(patientActionButton('consulta', id, 'Consulta', 'ph-stethoscope'));
-    else if (can('pacientes.editar')) actions.push(patientActionButton('editar', id, 'Editar datos', 'ph-user-gear'));
-    if (can('citas.gestionar')) actions.push(patientActionButton('cita', id, 'Agendar', 'ph-calendar-plus'));
-    return `<div class="record-actions">${actions.join('')}</div>`;
+    const actions = document.createElement('div');
+    actions.className = 'record-actions';
+    if (can('clinica.editar')) actions.append(createPatientActionButton('consulta', id, 'Consulta', 'ph-stethoscope'));
+    else if (can('pacientes.editar')) actions.append(createPatientActionButton('editar', id, 'Editar datos', 'ph-user-gear'));
+    if (can('citas.gestionar')) actions.append(createPatientActionButton('cita', id, 'Agendar', 'ph-calendar-plus'));
+    return actions;
+}
+function createPatientNameButton(id, fullName) {
+    const button = document.createElement('button');
+    button.type = 'button';
+    button.className = 'patient-name-button';
+    button.dataset.action = 'ver';
+    button.dataset.id = String(id);
+    button.textContent = fullName;
+    return button;
 }
 function renderTable() {
     const body = document.getElementById('tableBody');
     const cards = document.getElementById('tableBodyCards');
     if (!body) return;
     pacientesById.clear();
-    const rows = [];
-    const cardItems = [];
+    body.replaceChildren();
+    cards?.replaceChildren();
+
     pacientesList.forEach(patient => {
         const id = Number(patient.id);
         if (!Number.isSafeInteger(id) || id <= 0) return;
         pacientesById.set(id, patient);
-        const name = escapeHTML(patientFullName(patient) || 'Sin nombre');
-        const last = escapeHTML(patient.ultima_consulta ? formatDate(patient.ultima_consulta) : 'Sin consultas');
-        const nameButton = `<button type="button" class="patient-name-button" data-action="ver" data-id="${id}">${name}</button>`;
-        rows.push(`<tr><td>${escapeHTML(patient.cedula)}</td><td class="patient-name-cell">${nameButton}</td><td>${escapeHTML(patient.categoria)}</td><td>${last}</td><td>${patientActionsHTML(patient)}</td></tr>`);
-        cardItems.push(`<article class="record-card"><div class="record-identity"><div><h3>${nameButton}</h3><p>${escapeHTML(patient.cedula)}</p></div><span class="status-badge">${escapeHTML(patient.categoria)}</span></div><p class="record-meta">Última consulta: ${last}</p>${patientActionsHTML(patient)}</article>`);
-    });
-    body.innerHTML = rows.join('');
-    if (cards) cards.innerHTML = cardItems.join('');
+        const name = patientFullName(patient) || 'Sin nombre';
+        const last = patient.ultima_consulta ? formatDate(patient.ultima_consulta) : 'Sin consultas';
 
-    const filtered = Boolean(String(document.getElementById('filterCedula')?.value || '').trim() || document.getElementById('filterCategoria')?.value);
+        const row = document.createElement('tr');
+        const cedulaCell = document.createElement('td');
+        cedulaCell.textContent = String(patient.cedula || '');
+        const nameCell = document.createElement('td');
+        nameCell.className = 'patient-name-cell';
+        nameCell.append(createPatientNameButton(id, name));
+        const catCell = document.createElement('td');
+        catCell.textContent = String(patient.categoria || '');
+        const lastCell = document.createElement('td');
+        lastCell.textContent = last;
+        const actionsCell = document.createElement('td');
+        actionsCell.append(createPatientActionsNode(patient));
+        row.append(cedulaCell, nameCell, catCell, lastCell, actionsCell);
+        body.append(row);
+
+        if (cards) {
+            const card = document.createElement('article');
+            card.className = 'record-card';
+            const identity = document.createElement('div');
+            identity.className = 'record-identity';
+            const who = document.createElement('div');
+            const heading = document.createElement('h3');
+            heading.append(createPatientNameButton(id, name));
+            const cedulaP = document.createElement('p');
+            cedulaP.textContent = String(patient.cedula || '');
+            who.append(heading, cedulaP);
+            const badge = document.createElement('span');
+            badge.className = 'status-badge';
+            badge.textContent = String(patient.categoria || '');
+            identity.append(who, badge);
+            const meta = document.createElement('p');
+            meta.className = 'record-meta';
+            meta.textContent = `Última consulta: ${last}`;
+            card.append(identity, meta, createPatientActionsNode(patient));
+            cards.append(card);
+        }
+    });
+
+    const filtered = Boolean(sanitizePacientesSearch(document.getElementById('filterCedula')?.value) || document.getElementById('filterCategoria')?.value);
     const { total, pagina, por_pagina: perPage } = pacientesMeta;
     const from = total ? (pagina - 1) * perPage + 1 : 0;
     const to = Math.min(total, from + pacientesList.length - 1);
@@ -387,7 +470,15 @@ function renderClinicalHistory(consultas, patient) {
         card.className = 'record-card clinical-entry';
         const heading = document.createElement('div');
         heading.className = 'record-identity';
-        heading.innerHTML = `<h4>Consulta del ${escapeHTML(formatDate(consulta.fecha_circunstancia))}</h4>${consulta.actualizado_en ? '<span class="status-badge">Corregida</span>' : ''}`;
+        const headingTitle = document.createElement('h4');
+        headingTitle.textContent = `Consulta del ${formatDate(consulta.fecha_circunstancia)}`;
+        heading.append(headingTitle);
+        if (consulta.actualizado_en) {
+            const correctedBadge = document.createElement('span');
+            correctedBadge.className = 'status-badge';
+            correctedBadge.textContent = 'Corregida';
+            heading.append(correctedBadge);
+        }
         const meta = document.createElement('p');
         meta.className = 'record-meta';
         meta.textContent = `Registrada: ${formatDate(consulta.fecha_registro, true)}`;
@@ -438,7 +529,8 @@ function renderClinicalHistory(consultas, patient) {
         const actions = document.createElement('div');
         actions.className = 'record-actions';
         actions.append(textAction('Imprimir informe', 'ph-printer', () => openClinicalDocument('print_informe.php', 'consulta_id', id)));
-        if (consulta.fecha_inicio_reposo && consulta.fecha_fin_reposo) actions.append(textAction('Imprimir reposo', 'ph-prescription', () => openClinicalDocument('print_reposo.php', 'consulta_id', id)));
+        actions.append(textAction('Imprimir récipe', 'ph-prescription', () => openClinicalDocument('print_recipe.php', 'consulta_id', id)));
+        if (consulta.fecha_inicio_reposo && consulta.fecha_fin_reposo) actions.append(textAction('Imprimir reposo', 'ph-file-text', () => openClinicalDocument('print_reposo.php', 'consulta_id', id)));
         if (can('clinica.editar') && id > 0) actions.append(textAction('Corregir consulta', 'ph-pencil-simple', async () => {
             if (await closeDrawer() === false) return;
             openModal(patient.cedula, patient.categoria_id, patient.nombres, patient.apellidos, { consultaId: id });
@@ -455,7 +547,19 @@ function renderAppointments(citas) {
     citas.forEach(cita => {
         const row = document.createElement('div');
         row.className = 'record-identity appointment-history-row';
-        row.innerHTML = `<span>${escapeHTML(formatDate(cita.fecha_cita, true))}${cita.motivo ? `<small class="table-secondary">${escapeHTML(cita.motivo)}</small>` : ''}</span>${statusBadge(cita.estado)}`;
+        const info = document.createElement('span');
+        info.append(document.createTextNode(formatDate(cita.fecha_cita, true)));
+        if (cita.motivo) {
+            const reason = document.createElement('small');
+            reason.className = 'table-secondary';
+            reason.textContent = String(cita.motivo);
+            info.append(reason);
+        }
+        const badge = document.createElement('span');
+        const statusModifier = { Pendiente: 'pending', Completada: 'completed', Cancelada: 'cancelled' }[cita.estado] || 'neutral';
+        badge.className = `status-badge status-${statusModifier}`;
+        badge.textContent = String(cita.estado || 'Sin estado');
+        row.append(info, badge);
         appointments.append(row);
     });
 }
@@ -763,9 +867,28 @@ registroForm?.addEventListener('submit', async function (event) {
 });
 
 /* ---------- Eventos ---------- */
-const buscarPacientesDebounced = debounce(buscarPacientes, 300);
-document.getElementById('filterCedula')?.addEventListener('input', buscarPacientesDebounced);
+const filterCedulaInput = document.getElementById('filterCedula');
+filterCedulaInput?.addEventListener('input', () => {
+    clearTimeout(pacientesSearchTimer);
+    pacientesSearchTimer = setTimeout(() => { buscarPacientes(); }, 300);
+});
+filterCedulaInput?.addEventListener('keydown', event => {
+    if (event.key === 'Enter') {
+        event.preventDefault();
+        buscarPacientes();
+    } else if (event.key === 'Escape' && filterCedulaInput.value) {
+        event.preventDefault();
+        filterCedulaInput.value = '';
+        buscarPacientes();
+    }
+});
 document.getElementById('filterCategoria')?.addEventListener('change', buscarPacientes);
+document.getElementById('btnLimpiarPacientes')?.addEventListener('click', () => {
+    if (filterCedulaInput) filterCedulaInput.value = '';
+    const cat = document.getElementById('filterCategoria');
+    if (cat) cat.value = '';
+    buscarPacientes();
+});
 document.getElementById('tableBody')?.addEventListener('click', handlePatientAction);
 document.getElementById('tableBodyCards')?.addEventListener('click', handlePatientAction);
 document.getElementById('formCedula')?.addEventListener('input', function () {

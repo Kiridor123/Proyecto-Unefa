@@ -159,4 +159,71 @@ check(cita_fecha_problema(new DateTimeImmutable('-1 minute')) !== null, 'past ap
 check(cita_fecha_problema(new DateTimeImmutable('+1 day')) === null, 'appointment tomorrow accepted');
 check(cita_fecha_problema(new DateTimeImmutable('+2 years +1 day')) !== null, 'appointment beyond two years rejected');
 check(cita_fecha_problema(Validation::dateTime('9999-12-31T10:00')) !== null, 'appointment in year 9999 rejected');
+
+// Búsqueda, escapado LIKE/ILIKE, normalización de acentos, cédula y filtros seguros.
+check(
+    mb_strlen(Validation::SQL_ACCENT_FROM, 'UTF-8') === mb_strlen(Validation::SQL_ACCENT_TO, 'UTF-8'),
+    'SQL accent translation maps have identical character length'
+);
+$errors = [];
+check(
+    Validation::search(['q' => "  José\t\n  Peña\x00\u{200B}\u{FEFF}  "], 'q', $errors) === 'José Peña' && !$errors,
+    'search trims, collapses whitespace and strips control/zero-width characters'
+);
+$errors = [];
+Validation::search(['q' => str_repeat('á', Validation::SEARCH_MAX_LENGTH)], 'q', $errors);
+check(!$errors, 'search accepts exactly max Unicode characters');
+$errors = [];
+Validation::search(['q' => str_repeat('á', Validation::SEARCH_MAX_LENGTH + 1)], 'q', $errors);
+check(isset($errors['q']), 'search rejects Unicode strings over max length');
+$errors = [];
+Validation::search(['q' => str_repeat('a', 5000)], 'q', $errors);
+check(isset($errors['q']), 'search rejects oversized raw payload');
+$errors = [];
+Validation::search(['q' => ['nested']], 'q', $errors);
+check(isset($errors['q']), 'search rejects array input');
+$errors = [];
+Validation::search(['q' => "\xFF\xFE"], 'q', $errors);
+check(isset($errors['q']), 'search rejects invalid UTF-8');
+
+check(Validation::searchTokens('   ') === [], 'empty search produces no tokens');
+check(
+    Validation::searchTokens('uno dos tres cuatro cinco seis siete ocho') === ['uno', 'dos', 'tres', 'cuatro', 'cinco', 'seis'],
+    'search tokens are capped at SEARCH_MAX_TOKENS'
+);
+check(Validation::normalizeSearchTerm('ÁÉÍÓÚÜ Ñ Ç José') === 'aeiouu n c jose', 'normalizeSearchTerm folds case and accents');
+check(Validation::escapeLike('100%_a\\b') === '100\\%\\_a\\\\b', 'escapeLike escapes backslash, percent and underscore');
+check(Validation::likePattern('50%_José') === '%50\\%\\_jose%', 'likePattern folds accents and escapes wildcards');
+
+check(Validation::cedulaSearchToken('v-12.345.678') === 'V12345678', 'cedulaSearchToken strips hyphens and dots');
+check(Validation::cedulaSearchToken(' 12 345 678 ') === '12345678', 'cedulaSearchToken strips spaces');
+foreach (['%', '%%', '_', 'V-123%45', "' OR '1'='1", '---', ''] as $nonCedula) {
+    check(Validation::cedulaSearchToken($nonCedula) === '', 'cedulaSearchToken rejects wildcards/non-alphanumeric: ' . $nonCedula);
+}
+
+$errors = [];
+check(Validation::enum(['sexo' => 'Femenino'], 'sexo', ['Femenino', 'Masculino'], $errors) === 'Femenino' && !$errors, 'valid enum accepted');
+check(Validation::enum(['sexo' => ''], 'sexo', ['Femenino', 'Masculino'], $errors) === '' && !$errors, 'empty enum accepted');
+Validation::enum(['sexo' => 'Invalido'], 'sexo', ['Femenino', 'Masculino'], $errors);
+check(isset($errors['sexo']), 'invalid enum rejected');
+
+$errors = [];
+check(Validation::optionalPositiveId([], 'categoria_id', $errors) === null && !$errors, 'omitted optionalPositiveId returns null');
+check(Validation::optionalPositiveId(['categoria_id' => ''], 'categoria_id', $errors) === null && !$errors, 'empty optionalPositiveId returns null');
+check(Validation::optionalPositiveId(['categoria_id' => '42'], 'categoria_id', $errors) === 42 && !$errors, 'valid optionalPositiveId returns int');
+Validation::optionalPositiveId(['categoria_id' => '0'], 'categoria_id', $errors);
+check(isset($errors['categoria_id']), 'zero optionalPositiveId rejected');
+
+$errors = [];
+check(Validation::optionalDateRange(['desde' => '2026-01-01', 'hasta' => '2026-01-31'], $errors) === ['2026-01-01', '2026-01-31'] && !$errors, 'valid optionalDateRange accepted');
+$errors = [];
+Validation::optionalDateRange(['desde' => '2026-02-01', 'hasta' => '2026-01-01'], $errors);
+check(isset($errors['hasta']), 'reversed optionalDateRange rejected');
+$errors = [];
+Validation::optionalDateRange(['desde' => '2026-02-30', 'hasta' => '2026-03-01'], $errors);
+check(isset($errors['desde']), 'invalid calendar date in optionalDateRange rejected');
+$errors = [];
+Validation::optionalDateRange(['desde' => '2020-01-01', 'hasta' => '2026-01-02'], $errors, 'desde', 'hasta', '+5 years');
+check(isset($errors['hasta']), 'optionalDateRange enforces maxSpan');
+
 echo "Backend validation: {$checks} assertions passed.\n";

@@ -27,9 +27,8 @@ if (!$paciente) {
 }
 
 $selectConsulta = "
-    SELECT c.*, u.nombre_completo AS medico_nombre, u.registro_profesional AS medico_registro
+    SELECT c.*
     FROM consultas c
-    LEFT JOIN usuarios u ON u.id = c.medico_id
 ";
 if ($consulta_id !== null) {
     $stmtConsulta = $db->prepare($selectConsulta . ' WHERE c.id = ? AND c.paciente_id = ?');
@@ -49,7 +48,6 @@ $fecha_evaluacion = $hay_consulta ? print_date($consulta['fecha_circunstancia'])
 // Edad a la fecha de la evaluación (o a hoy si aún no hay evaluación).
 $edad = print_edad($paciente['fecha_nacimiento'], $fecha_evaluacion);
 $emision = $hay_consulta ? print_fecha_emision($consulta) : new DateTimeImmutable('today');
-$medico = $hay_consulta ? print_medico($consulta) : null;
 $c = static fn (string $campo) => $consulta[$campo] ?? null;
 
 $es_masculino = ($paciente['sexo'] ?? '') === 'Masculino';
@@ -296,13 +294,6 @@ print_page_start('Historia clínica - ' . $paciente['cedula'], [
                 <div class="firma">
                     <div class="linea"></div>
                     <span>SELLO MÉDICO</span>
-                </div>
-                <div class="firma">
-                    <div class="linea"></div>
-                    <span>MÉDICO EVALUADOR</span>
-                    <?php if ($medico !== null): ?>
-                        <span class="detalle"><?= print_e($medico) ?></span>
-                    <?php endif; ?>
                 </div>
             </div>
         </div>

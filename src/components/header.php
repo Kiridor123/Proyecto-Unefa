@@ -1,6 +1,7 @@
 <header class="page-header">
     <div class="page-title-group">
         <button id="sidebarToggle" type="button" class="icon-button mobile-menu" onclick="toggleMobileSidebar()" aria-label="Abrir menú de navegación" aria-controls="sidebar" aria-expanded="false"><i class="ph ph-list" aria-hidden="true"></i></button>
+        <a href="#dashboard" onclick="switchTab('dashboard'); return false;" class="mobile-brand-mark" aria-label="Salud UNEFA, ir al resumen"><img src="<?= asset_url('assets/logo-unefa.png') ?>" width="26" height="30" alt="Escudo de la UNEFA" decoding="async"></a>
         <h1 id="headerTitle" tabindex="-1">Resumen de atención</h1>
     </div>
     <div class="user-menu-wrap">

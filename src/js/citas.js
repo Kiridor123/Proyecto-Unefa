@@ -1,9 +1,34 @@
 let citasRequestVersion = 0;
 let citaLookupVersion = 0;
+let citasSearchTimer = null;
 const updatingAppointments = new Set();
 const CITAS_POR_PAGINA = 25;
+const CITAS_SEARCH_MAX = 100;
+const CITAS_ESTADOS_VALIDOS = new Set(['', 'Pendiente', 'Completada', 'Cancelada']);
 // Estado de la agenda: vista rápida (hoy, próximas, vencidas, todas) o un día concreto.
 const citasFiltro = { vista: 'proximas', pagina: 1 };
+
+function sanitizeCitasSearch(value) {
+    return String(value ?? '')
+        .replace(/[\t\r\n]+/g, ' ')
+        .replace(/[\x00-\x1F\x7F]+/g, '')
+        .replace(/\s+/g, ' ')
+        .trim()
+        .slice(0, CITAS_SEARCH_MAX);
+}
+function createStatusBadgeNode(label, modifier = 'neutral') {
+    const badge = document.createElement('span');
+    badge.className = `status-badge status-${modifier}`;
+    badge.textContent = label || 'Sin estado';
+    return badge;
+}
+function appendAppointmentStatusNodes(container, appointment) {
+    const modifier = { Pendiente: 'pending', Completada: 'completed', Cancelada: 'cancelled' }[appointment.estado] || 'neutral';
+    container.append(createStatusBadgeNode(appointment.estado || 'Sin estado', modifier));
+    if (isOverdue(appointment)) {
+        container.append(document.createTextNode(' '), createStatusBadgeNode('Vencida', 'overdue'));
+    }
+}
 
 // Comprueba un permiso del contrato de sesión; sin can() (p. ej. durante la integración) no bloquea.
 function vistaPuede(permiso) {
@@ -70,10 +95,12 @@ function vistasRenderPager(container, meta, onPage, unidad = ['registro', 'regis
 
 function citasQueryParameters() {
     const estadoSelect = document.getElementById('filterCitasEstado');
-    const fecha = document.getElementById('filterCitasFecha')?.value || '';
-    const q = (document.getElementById('filterCitasPaciente')?.value || '').trim();
+    const rawFecha = document.getElementById('filterCitasFecha')?.value || '';
+    const fecha = /^\d{4}-\d{2}-\d{2}$/.test(rawFecha) ? rawFecha : '';
+    const q = sanitizeCitasSearch(document.getElementById('filterCitasPaciente')?.value);
     const parameters = new URLSearchParams({ pagina: String(citasFiltro.pagina), por_pagina: String(CITAS_POR_PAGINA) });
-    let estado = estadoSelect?.value || '';
+    const rawEstado = estadoSelect?.value || '';
+    let estado = CITAS_ESTADOS_VALIDOS.has(rawEstado) ? rawEstado : '';
     const hoy = localDate();
     if (fecha) {
         parameters.set('fecha', fecha);
@@ -149,6 +176,8 @@ function mostrarCitasDe(vista = 'hoy') {
 }
 
 async function loadCitas() {
+    clearTimeout(citasSearchTimer);
+    citasSearchTimer = null;
     const version = ++citasRequestVersion;
     const loader = document.getElementById('citasTableLoader');
     const table = document.getElementById('citasTableWrap');
@@ -181,7 +210,12 @@ async function loadCitas() {
         setVisible(cards, citasList.length > 0);
         vistasRenderPager(pager, meta, pagina => { citasFiltro.pagina = pagina; loadCitas(); document.getElementById('citasTitle')?.scrollIntoView({ block: 'start' }); }, ['cita', 'citas']);
     } catch (error) {
-        if (error.name !== 'AbortError' && version === citasRequestVersion) showBlockError('citasError', loader, error.message, loadCitas);
+        if (error.name === 'AbortError' || version !== citasRequestVersion) return;
+        if (error.status === 422) {
+            showNotification('warning', error.message || 'Revise los filtros de la agenda.');
+        } else {
+            showBlockError('citasError', loader, error.message, loadCitas);
+        }
     } finally {
         if (version === citasRequestVersion) {
             setVisible(loader, false);
@@ -273,9 +307,24 @@ function renderCitasTable(meta = null) {
         const time = formatTime(appointment.fecha_cita);
         const row = document.createElement('tr');
         if (isOverdue(appointment)) row.className = 'is-overdue';
-        row.innerHTML = `<td class="tabular-nums"><time datetime="${escapeHTML(String(appointment.fecha_cita || '').replace(' ', 'T'))}">${escapeHTML(time)}</time></td><td>${escapeHTML(appointment.cedula)}</td><td class="patient-name-cell"></td><td>${escapeHTML(appointment.categoria)}</td><td>${appointmentStatusHTML(appointment)}</td><td></td>`;
-        row.children[2].append(appointmentDetail(appointment));
-        row.lastElementChild.append(appointmentActions(appointment));
+        const timeCell = document.createElement('td');
+        timeCell.className = 'tabular-nums';
+        const timeEl = document.createElement('time');
+        timeEl.dateTime = String(appointment.fecha_cita || '').replace(' ', 'T');
+        timeEl.textContent = time;
+        timeCell.append(timeEl);
+        const cedulaCell = document.createElement('td');
+        cedulaCell.textContent = String(appointment.cedula || '');
+        const patientCell = document.createElement('td');
+        patientCell.className = 'patient-name-cell';
+        patientCell.append(appointmentDetail(appointment));
+        const catCell = document.createElement('td');
+        catCell.textContent = String(appointment.categoria || '');
+        const statusCell = document.createElement('td');
+        appendAppointmentStatusNodes(statusCell, appointment);
+        const actionsCell = document.createElement('td');
+        actionsCell.append(appointmentActions(appointment));
+        row.append(timeCell, cedulaCell, patientCell, catCell, statusCell, actionsCell);
         body.append(row);
 
         const card = document.createElement('article');
@@ -287,8 +336,10 @@ function renderCitasTable(meta = null) {
         const cedula = document.createElement('p');
         cedula.textContent = `${appointment.cedula ?? ''} · ${appointment.categoria ?? ''}`;
         who.append(cedula);
-        identity.append(who);
-        identity.insertAdjacentHTML('beforeend', `<span class="record-status">${appointmentStatusHTML(appointment)}</span>`);
+        const statusWrap = document.createElement('span');
+        statusWrap.className = 'record-status';
+        appendAppointmentStatusNodes(statusWrap, appointment);
+        identity.append(who, statusWrap);
         const date = document.createElement('p');
         date.className = 'appointment-date';
         date.textContent = `${time} · ${formatDate(appointment.fecha_cita)}`;
@@ -507,9 +558,34 @@ document.getElementById('citaCedula')?.addEventListener('input', () => {
     ['citaNombres', 'citaApellidos', 'citaCategoria'].forEach(id => { document.getElementById(id).value = ''; document.getElementById(id).required = false; });
     setCitaLookupStatus('');
 });
-document.getElementById('filterCitasPaciente')?.addEventListener('input', debounce(() => { citasFiltro.pagina = 1; loadCitas(); }, 320));
+const filterCitasPacienteInput = document.getElementById('filterCitasPaciente');
+filterCitasPacienteInput?.addEventListener('input', () => {
+    clearTimeout(citasSearchTimer);
+    citasSearchTimer = setTimeout(() => { citasFiltro.pagina = 1; loadCitas(); }, 300);
+});
+filterCitasPacienteInput?.addEventListener('keydown', event => {
+    if (event.key === 'Enter') {
+        event.preventDefault();
+        citasFiltro.pagina = 1;
+        loadCitas();
+    } else if (event.key === 'Escape' && filterCitasPacienteInput.value) {
+        event.preventDefault();
+        filterCitasPacienteInput.value = '';
+        citasFiltro.pagina = 1;
+        loadCitas();
+    }
+});
 document.getElementById('filterCitasEstado')?.addEventListener('change', () => { citasFiltro.pagina = 1; loadCitas(); });
 document.getElementById('filterCitasFecha')?.addEventListener('change', () => { citasFiltro.pagina = 1; loadCitas(); });
+document.getElementById('btnLimpiarCitas')?.addEventListener('click', () => {
+    if (filterCitasPacienteInput) filterCitasPacienteInput.value = '';
+    const fecha = document.getElementById('filterCitasFecha');
+    if (fecha) fecha.value = '';
+    const estado = document.getElementById('filterCitasEstado');
+    if (estado && !estado.disabled) estado.value = '';
+    citasFiltro.pagina = 1;
+    loadCitas();
+});
 document.querySelectorAll('[data-citas-vista]').forEach(button => button.addEventListener('click', () => {
     const fecha = document.getElementById('filterCitasFecha');
     if (citasFiltro.vista === button.dataset.citasVista && !fecha?.value) return;

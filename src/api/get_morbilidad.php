@@ -5,7 +5,23 @@ require_once __DIR__ . '/../config/Morbilidad.php';
 
 api_method('GET');
 api_require('reportes.ver');
-[$start, $end] = morbilidad_rango($_GET);
-$rows = morbilidad_filas(api_db(), $start, $end);
-api_audit('consultar_morbilidad', 'reporte', null, ['fecha_inicio' => $start, 'fecha_fin' => $end, 'registros' => count($rows)]);
-api_json(['success' => true, 'data' => $rows]);
+
+$db = api_db();
+$filters = morbilidad_filtros($_GET, $db);
+$rows = morbilidad_filas($db, $filters, null, false);
+
+api_audit('consultar_morbilidad', 'reporte', null, morbilidad_audit_detail($filters, count($rows)));
+api_json([
+    'success' => true,
+    'data' => $rows,
+    'meta' => [
+        'total' => count($rows),
+        'fecha_inicio' => $filters['fecha_inicio'],
+        'fecha_fin' => $filters['fecha_fin'],
+        'categoria_id' => $filters['categoria_id'],
+        'categoria' => $filters['categoria_nombre'],
+        'sexo' => $filters['sexo'],
+        'con_reposo' => $filters['con_reposo'],
+        'q' => $filters['q'],
+    ],
+]);

@@ -1,11 +1,8 @@
 <aside id="sidebar" class="app-sidebar" aria-label="Navegación principal">
     <div class="sidebar-brand">
         <a href="#dashboard" onclick="switchTab('dashboard'); return false;" class="brand-lockup" aria-label="Salud UNEFA, ir al resumen">
-            <svg class="brand-mark" width="34" height="34" viewBox="0 0 34 34" fill="none" aria-hidden="true">
-                <path d="M12 4.5h10V12h7.5v10H22v7.5H12V22H4.5V12H12V4.5Z" stroke="currentColor" stroke-width="1.7" stroke-linejoin="round"/>
-                <path d="M9 17h4l2-4 4 8 2-4h4" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"/>
-            </svg>
-            <span><strong>Salud UNEFA</strong><small>Gestión médica</small></span>
+            <img src="<?= asset_url('assets/logo-unefa.png') ?>" class="brand-emblem" width="38" height="44" alt="Escudo institucional de la UNEFA" decoding="async">
+            <span><strong>Salud UNEFA</strong><small>Servicio médico</small></span>
         </a>
         <button type="button" class="icon-button sidebar-close" onclick="toggleMobileSidebar()" aria-label="Cerrar menú"><i class="ph ph-x" aria-hidden="true"></i></button>
     </div>

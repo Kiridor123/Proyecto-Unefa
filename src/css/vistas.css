@@ -1,14 +1,14 @@
-/* Vistas de agenda, panel, reportes y administración (W3b).
-   Se carga después de app.css y reutiliza sus tokens (--surface, --border, --muted…). */
+/* Vistas de agenda, panel, reportes y administración.
+   Se carga después de app.css y reutiliza los tokens institucionales UNEFA. */
 
 /* ---------- Controles compartidos ---------- */
 .view-chip { display: inline-flex; align-items: center; gap: 7px; min-height: 40px; padding: 8px 13px; border: 1px solid var(--control); border-radius: var(--radius-control); background: var(--surface); color: var(--muted); font-size: 13px; font-weight: 400; line-height: 1.4; white-space: nowrap; }
-.view-chip:hover { color: var(--text); border-color: #9baaaa; background: var(--raised); }
-.view-chip[aria-pressed="true"] { color: var(--text); background: var(--active); border-color: #9baaaa; font-weight: 500; }
+.view-chip:hover { color: var(--text); border-color: var(--control-hover); background: var(--raised); }
+.view-chip[aria-pressed="true"] { color: var(--accent-ink); background: var(--accent-soft); border-color: #9bb7df; font-weight: 500; }
 .view-chip-count { display: inline-flex; align-items: center; justify-content: center; min-width: 22px; padding: 0 6px; border-radius: 4px; background: var(--raised); color: var(--muted); font-size: 11px; font-weight: 500; line-height: 20px; font-variant-numeric: tabular-nums; }
 .view-chip-count:empty, .view-chip-count.hidden { display: none; }
-.view-chip[aria-pressed="true"] .view-chip-count { background: var(--surface); color: var(--text); }
-.view-chip-count.view-chip-alert { background: #fff5de; color: #7b5819; }
+.view-chip[aria-pressed="true"] .view-chip-count { background: var(--surface); color: var(--accent-ink); }
+.view-chip-count.view-chip-alert { background: var(--unefa-gold-soft); color: var(--unefa-gold-ink); }
 
 .list-pager { display: flex; align-items: center; justify-content: space-between; gap: 12px 16px; flex-wrap: wrap; padding: 14px 22px; border-top: 1px solid var(--rule); background: var(--surface); }
 .list-pager.hidden { display: none; }
@@ -19,17 +19,17 @@
 .state-panel.state-compact > i { font-size: 22px; }
 .state-panel.is-error > i { color: var(--negative); }
 
-.status-overdue { background: #fbecec; color: var(--negative); }
+.status-overdue { background: var(--negative-soft); color: var(--negative-ink); }
 .data-table tbody tr.is-muted td { color: var(--muted); }
 
 /* ---------- Agenda de citas ---------- */
 .citas-views { display: flex; flex-wrap: wrap; gap: 8px; padding: 18px 22px 0; }
 .citas-toolbar { flex-wrap: wrap; }
 .date-filter-field { width: 180px; }
-.data-table tbody tr.day-row th { padding: 9px 20px; background: var(--raised); border-bottom: 1px solid var(--rule); color: var(--text); font-size: 12px; font-weight: 500; text-align: left; white-space: normal; }
+.data-table tbody tr.day-row th { padding: 9px 20px; background: var(--raised); border-bottom: 1px solid var(--rule); color: var(--primary); font-size: 12px; font-weight: 500; text-align: left; white-space: normal; }
 .data-table tbody tr.day-row:hover { background: transparent; }
-.data-table tbody tr.is-overdue td:first-child { box-shadow: inset 3px 0 0 #d8a23b; }
-.record-day-heading { margin: 0; padding: 9px 18px; background: var(--raised); border-bottom: 1px solid var(--rule); color: var(--text); font-size: 12px; font-weight: 500; line-height: 1.5; letter-spacing: normal; }
+.data-table tbody tr.is-overdue td:first-child { box-shadow: inset 3px 0 0 var(--unefa-gold); }
+.record-day-heading { margin: 0; padding: 9px 18px; background: var(--raised); border-bottom: 1px solid var(--rule); color: var(--primary); font-size: 12px; font-weight: 500; line-height: 1.5; letter-spacing: normal; }
 .appointment-patient { display: flex; flex-direction: column; align-items: flex-start; min-width: 0; }
 .appointment-reason { max-width: 46ch; overflow-wrap: anywhere; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
 .record-card .appointment-reason { max-width: none; }
@@ -48,21 +48,28 @@
 .today-list.hidden { display: none; }
 .today-row { display: grid; grid-template-columns: auto minmax(0,1fr) auto; align-items: center; gap: 14px; min-height: 60px; padding: 12px 0; border-bottom: 1px solid var(--rule); }
 .today-row:last-child { border-bottom: 0; }
-.today-time { min-width: 44px; color: var(--text); font-size: 13px; font-weight: 500; }
+.today-time { min-width: 44px; color: var(--primary); font-size: 13px; font-weight: 500; }
 .today-row.is-overdue .today-time { color: var(--warning); }
 .today-body { display: flex; flex-direction: column; align-items: flex-start; gap: 2px; min-width: 0; }
 .today-body .table-secondary { margin-top: 0; overflow-wrap: anywhere; }
 .today-body .status-badge { margin-top: 4px; }
 .today-row .btn { min-height: 36px; padding: 6px 11px; font-size: 12px; }
-.today-days { display: inline-flex; align-items: center; justify-content: center; min-width: 72px; padding: 3px 8px; border-radius: 4px; background: #fff5de; color: #7b5819; font-size: 11px; font-weight: 500; line-height: 1.5; white-space: nowrap; }
-.today-days.is-today { background: #fbecec; color: var(--negative); }
+.today-days { display: inline-flex; align-items: center; justify-content: center; min-width: 72px; padding: 3px 8px; border-radius: 4px; background: var(--unefa-gold-soft); color: var(--unefa-gold-ink); font-size: 11px; font-weight: 500; line-height: 1.5; white-space: nowrap; }
+.today-days.is-today { background: var(--negative-soft); color: var(--negative-ink); }
 .today-more { padding: 4px 14px 14px; }
 .today-more.hidden { display: none; }
 
 /* ---------- Reportes de morbilidad ---------- */
 .report-shortcuts { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; padding: 0 22px 20px; }
+.report-shortcuts.hidden { display: none; }
 .report-shortcuts > span { color: var(--muted); font-size: 12px; margin-right: 4px; }
-.stale-notice { display: flex; align-items: center; gap: 12px; padding: 12px 22px; background: #fff5de; color: #6b4c14; border-bottom: 1px solid #f1e2bd; }
+.report-search-toolbar { border-top: 1px solid var(--rule); border-bottom: 0; }
+.report-select-sm { width: 136px; }
+.report-select-md { width: 194px; }
+.report-active-filters { padding: 12px 22px; border-bottom: 1px solid var(--rule); background: #f8fafd; }
+.report-active-filters .view-chip { min-height: 32px; padding: 4px 10px; font-size: 12px; }
+.report-active-filters .view-chip i { font-size: 13px; }
+.stale-notice { display: flex; align-items: center; gap: 12px; padding: 12px 22px; background: var(--unefa-gold-soft); color: #664405; border-bottom: 1px solid #eedaa4; }
 .stale-notice.hidden { display: none; }
 .stale-notice > i { font-size: 19px; flex-shrink: 0; }
 .stale-notice p { flex: 1; font-size: 13px; line-height: 1.6; }
@@ -74,8 +81,8 @@
 .admin-tabs { display: flex; gap: 4px; border-bottom: 1px solid var(--border); overflow-x: auto; scrollbar-width: none; }
 .admin-tab { display: inline-flex; align-items: center; gap: 8px; min-height: 44px; padding: 10px 14px; margin-bottom: -1px; border: 0; border-bottom: 2px solid transparent; background: transparent; color: var(--muted); font-size: 14px; white-space: nowrap; }
 .admin-tab i { font-size: 18px; }
-.admin-tab:hover { color: var(--text); }
-.admin-tab[aria-selected="true"] { color: var(--text); border-bottom-color: var(--primary); font-weight: 500; }
+.admin-tab:hover { color: var(--primary); }
+.admin-tab[aria-selected="true"] { color: var(--primary); border-bottom-color: var(--primary); font-weight: 500; }
 .admin-tab[hidden] { display: none; }
 .admin-tab:focus-visible { outline-offset: -2px; }
 .list-panel.hidden { display: none; }
@@ -96,7 +103,7 @@
 .audit-detail { max-width: 360px; color: var(--muted); font-size: 12px; overflow-wrap: anywhere; }
 .record-card .audit-detail { max-width: none; }
 #usuarioModal { z-index: 60; }
-#usuarioModalContent { box-shadow: 0 18px 60px rgba(24,37,40,.16); }
+#usuarioModalContent { box-shadow: 0 18px 60px rgba(12, 35, 75, .18); }
 
 /* ---------- Adaptación ---------- */
 @media (max-width: 1023px) {
@@ -119,6 +126,8 @@
     .report-shortcuts { padding: 0 18px 18px; }
     .report-shortcuts > span { width: 100%; }
     .report-shortcuts .view-chip { flex: 0 1 auto; }
+    .report-select-sm, .report-select-md { width: 100%; }
+    .report-active-filters { padding: 12px 18px; }
     .report-actions { flex-wrap: wrap; }
     .report-actions .btn:first-child { flex: 1 1 100%; }
     .report-actions .btn:not(:first-child) { flex: 1 1 0; }

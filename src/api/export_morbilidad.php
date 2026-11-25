@@ -5,14 +5,24 @@ require_once __DIR__ . '/../config/Morbilidad.php';
 
 api_method('GET');
 api_require('reportes.ver');
-[$start, $end] = morbilidad_rango($_GET);
-$rows = morbilidad_filas(api_db(), $start, $end);
 
-/** Evita que una hoja de cálculo interprete el valor como fórmula. */
+$db = api_db();
+$filters = morbilidad_filtros($_GET, $db);
+$rows = morbilidad_filas($db, $filters, null, false);
+$start = $filters['fecha_inicio'];
+$end = $filters['fecha_fin'];
+
+/** Evita que una hoja de cálculo interprete el valor como fórmula (CSV/Excel formula injection). */
 function csv_cell($value): string
 {
-    $text = str_replace(["\r\n", "\r"], "\n", trim((string) ($value ?? '')));
-    if ($text !== '' && in_array($text[0], ['=', '+', '-', '@', "\t"], true)) $text = "'" . $text;
+    $raw = str_replace(["\r\n", "\r"], "\n", (string) ($value ?? ''));
+    $text = trim($raw);
+    if ($text !== '' && in_array($text[0], ['=', '+', '-', '@', "\t", "\r"], true)) {
+        $text = "'" . $text;
+    }
+    if (str_contains($text, "\n")) {
+        $text = preg_replace('/\n(?=[\t ]*[=+\-@])/', "\n'", $text) ?? $text;
+    }
     return $text;
 }
 
@@ -42,7 +52,7 @@ rewind($output);
 $content = stream_get_contents($output);
 fclose($output);
 
-api_audit('exportar_morbilidad', 'reporte', null, ['fecha_inicio' => $start, 'fecha_fin' => $end, 'registros' => count($rows)]);
+api_audit('exportar_morbilidad', 'reporte', null, morbilidad_audit_detail($filters, count($rows)));
 http_response_code(200);
 header('Content-Type: text/csv; charset=UTF-8');
 header('Content-Disposition: attachment; filename="morbilidad_' . $start . '_' . $end . '.csv"');

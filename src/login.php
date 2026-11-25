@@ -17,10 +17,12 @@ if (isset($_GET['expirada'])) {
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <meta name="theme-color" content="#f6f8f8">
+    <meta name="theme-color" content="#0c234b">
     <meta name="referrer" content="same-origin">
     <meta name="robots" content="noindex, nofollow">
     <title>Iniciar sesión · Salud UNEFA</title>
+    <link rel="icon" type="image/png" href="<?= asset_url('assets/favicon-unefa.png') ?>">
+    <link rel="apple-touch-icon" href="<?= asset_url('assets/favicon-unefa.png') ?>">
     <link rel="preload" href="fonts/geist-latin.woff2" as="font" type="font/woff2" crossorigin>
     <link rel="stylesheet" href="<?= asset_url('vendor/phosphor/style.css') ?>">
     <link rel="stylesheet" href="<?= asset_url('css/app.css') ?>">
@@ -29,14 +31,10 @@ if (isset($_GET['expirada'])) {
     <main class="login-layout">
         <section class="login-brand" aria-labelledby="loginBrandTitle">
             <div class="brand-lockup">
-                <svg class="brand-mark" width="34" height="34" viewBox="0 0 34 34" fill="none" aria-hidden="true">
-                    <path d="M12 4.5h10V12h7.5v10H22v7.5H12V22H4.5V12H12V4.5Z" stroke="currentColor" stroke-width="1.7" stroke-linejoin="round"/>
-                    <path d="M9 17h4l2-4 4 8 2-4h4" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"/>
-                </svg>
-                <span><strong id="loginBrandTitle">Salud UNEFA</strong><small>Gestión médica</small></span>
+                <img src="<?= asset_url('assets/logo-unefa.png') ?>" class="brand-emblem brand-emblem-lg" width="48" height="55" alt="Escudo institucional de la UNEFA" decoding="async">
+                <span><strong id="loginBrandTitle">Salud UNEFA</strong><small>Servicio médico universitario</small></span>
             </div>
             <div class="login-brand-copy">
-                <p class="login-kicker">Servicio médico universitario</p>
                 <h1>Expedientes, consultas y citas en un solo lugar.</h1>
                 <p>Acceso exclusivo para el personal autorizado del servicio de salud. La información clínica es confidencial y cada acceso queda registrado.</p>
             </div>

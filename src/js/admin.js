@@ -1,10 +1,26 @@
 // Administración: usuarios (usuarios.gestionar) y registro de actividad (auditoria.ver).
 let adminUsuarios = [];
+let adminUsuariosCatalog = [];
+let adminUsuariosTotalGeneral = 0;
 let adminUsuariosVersion = 0;
+let adminUsuariosSearchTimer = null;
 let adminAuditoriaVersion = 0;
+let adminAuditoriaSearchTimer = null;
 let adminAuditoriaCargada = false;
 const adminAuditoriaFiltro = { pagina: 1, por_pagina: 25 };
 const updatingUsers = new Set();
+const ADMIN_SEARCH_MAX = 100;
+const ADMIN_ROLES_VALIDOS = new Set(['', 'administrador', 'medico', 'asistente']);
+const ADMIN_ESTADOS_VALIDOS = new Set(['', 'activo', 'inactivo', 'bloqueado']);
+
+function sanitizeAdminSearch(value) {
+    return String(value ?? '')
+        .replace(/[\t\r\n]+/g, ' ')
+        .replace(/[\x00-\x1F\x7F]+/g, '')
+        .replace(/\s+/g, ' ')
+        .trim()
+        .slice(0, ADMIN_SEARCH_MAX);
+}
 
 const ADMIN_ROLES = {
     administrador: { nombre: 'Administrador', ayuda: 'Acceso completo: pacientes, historia clínica, citas, reportes, usuarios y registro de actividad.' },
@@ -16,6 +32,7 @@ const ADMIN_ACCIONES = {
     login_fallido: 'Inicio de sesión fallido',
     logout: 'Cierre de sesión',
     cambiar_password: 'Cambio de contraseña',
+    cambiar_password_fallido: 'Cambio de contraseña fallido',
     crear_usuario: 'Creación de usuario',
     editar_usuario: 'Edición de usuario',
     guardar_usuario: 'Guardado de usuario',
@@ -35,6 +52,7 @@ const ADMIN_ACCIONES = {
     imprimir_historia: 'Impresión de historia clínica',
     imprimir_informe: 'Impresión de informe médico',
     imprimir_reposo: 'Impresión de reposo',
+    imprimir_recipe: 'Impresión de récipe médico',
     imprimir_morbilidad: 'Impresión de morbilidad'
 };
 const ADMIN_ENTIDADES = { paciente: 'Paciente', consulta: 'Consulta', cita: 'Cita', usuario: 'Usuario', reporte: 'Reporte' };
@@ -62,11 +80,22 @@ function userLockedUntil(user) {
     const until = parseServerTimestamp(user.bloqueado_hasta);
     return until && until > new Date() ? until : null;
 }
-function userStatusHTML(user) {
-    if (!userIsActive(user)) return '<span class="status-badge status-cancelled">Inactivo</span>';
+function createUserStatusBadge(user) {
+    const badge = document.createElement('span');
+    if (!userIsActive(user)) {
+        badge.className = 'status-badge status-cancelled';
+        badge.textContent = 'Inactivo';
+        return badge;
+    }
     const locked = userLockedUntil(user);
-    if (locked) return `<span class="status-badge status-pending">Bloqueado hasta las ${escapeHTML(`${String(locked.getHours()).padStart(2, '0')}:${String(locked.getMinutes()).padStart(2, '0')}`)}</span>`;
-    return '<span class="status-badge status-completed">Activo</span>';
+    if (locked) {
+        badge.className = 'status-badge status-pending';
+        badge.textContent = `Bloqueado hasta las ${String(locked.getHours()).padStart(2, '0')}:${String(locked.getMinutes()).padStart(2, '0')}`;
+        return badge;
+    }
+    badge.className = 'status-badge status-completed';
+    badge.textContent = 'Activo';
+    return badge;
 }
 function roleName(role) {
     return ADMIN_ROLES[role]?.nombre || role || 'Sin rol';
@@ -128,24 +157,58 @@ async function loadAdmin() {
 }
 
 // ---------- Usuarios ----------
+function adminUsuariosFilters() {
+    const q = sanitizeAdminSearch(document.getElementById('adminFiltroUsuario')?.value);
+    const rawRol = document.getElementById('adminFiltroRol')?.value || '';
+    const rawEstado = document.getElementById('adminFiltroEstado')?.value || '';
+    return {
+        q,
+        rol: ADMIN_ROLES_VALIDOS.has(rawRol) ? rawRol : '',
+        estado: ADMIN_ESTADOS_VALIDOS.has(rawEstado) ? rawEstado : ''
+    };
+}
+function adminUsuariosQueryParameters(filters) {
+    const params = new URLSearchParams();
+    if (filters.q) params.set('q', filters.q);
+    if (filters.rol) params.set('rol', filters.rol);
+    if (filters.estado) params.set('estado', filters.estado);
+    return params;
+}
 async function loadAdminUsuarios() {
+    clearTimeout(adminUsuariosSearchTimer);
+    adminUsuariosSearchTimer = null;
     const version = ++adminUsuariosVersion;
     const loader = document.getElementById('adminUsuariosLoader');
     if (!loader) return;
+    const filters = adminUsuariosFilters();
+    const filtered = Boolean(filters.q || filters.rol || filters.estado);
     setVisible(document.getElementById('adminUsuariosError'), false);
-    setVisible(document.getElementById('adminUsuariosEmpty'), false);
-    setVisible(document.getElementById('adminUsuariosTableWrap'), false);
-    setVisible(document.getElementById('adminUsuariosCards'), false);
-    setVisible(loader, true, 'flex');
+    if (!adminUsuariosCatalog.length) {
+        setVisible(document.getElementById('adminUsuariosEmpty'), false);
+        setVisible(document.getElementById('adminUsuariosTableWrap'), false);
+        setVisible(document.getElementById('adminUsuariosCards'), false);
+        setVisible(loader, true, 'flex');
+    }
     document.getElementById('adminPanelUsuarios')?.setAttribute('aria-busy', 'true');
     try {
-        const json = await apiRequest('api/usuarios.php', {}, 'adminUsuarios');
+        const params = adminUsuariosQueryParameters(filters);
+        const url = params.toString() ? `api/usuarios.php?${params}` : 'api/usuarios.php';
+        const json = await apiRequest(url, {}, 'adminUsuarios');
         if (version !== adminUsuariosVersion) return;
         adminUsuarios = Array.isArray(json.data) ? json.data : Array.isArray(json.usuarios) ? json.usuarios : [];
+        adminUsuariosTotalGeneral = Number(json.meta?.total_general ?? (filtered ? Math.max(adminUsuariosCatalog.length, adminUsuarios.length) : adminUsuarios.length));
+        if (!filtered) {
+            adminUsuariosCatalog = adminUsuarios;
+            fillAuditUserFilter();
+        }
         renderAdminUsuarios();
-        fillAuditUserFilter();
     } catch (error) {
-        if (error.name !== 'AbortError' && version === adminUsuariosVersion) showBlockError('adminUsuariosError', loader, error.message, loadAdminUsuarios);
+        if (error.name === 'AbortError' || version !== adminUsuariosVersion) return;
+        if (error.status === 422) {
+            showNotification('warning', error.message || 'Revise los filtros de usuarios.');
+        } else {
+            showBlockError('adminUsuariosError', loader, error.message, loadAdminUsuarios);
+        }
     } finally {
         if (version === adminUsuariosVersion) {
             setVisible(loader, false);
@@ -154,11 +217,13 @@ async function loadAdminUsuarios() {
     }
 }
 function filteredAdminUsuarios() {
-    const query = normalizeSearch(document.getElementById('adminFiltroUsuario')?.value);
-    const role = document.getElementById('adminFiltroRol')?.value || '';
-    const status = document.getElementById('adminFiltroEstado')?.value || '';
+    const { q, rol: role, estado: status } = adminUsuariosFilters();
+    const tokens = q ? normalizeSearch(q).split(/\s+/).filter(Boolean).slice(0, 6) : [];
     return adminUsuarios.filter(user => {
-        if (query && !normalizeSearch(`${user.usuario} ${user.nombre_completo}`).includes(query)) return false;
+        if (tokens.length) {
+            const haystack = normalizeSearch(`${user.usuario ?? ''} ${user.nombre_completo ?? ''} ${user.registro_profesional ?? ''}`);
+            if (!tokens.every(token => haystack.includes(token))) return false;
+        }
         if (role && user.rol !== role) return false;
         if (status === 'activo' && !userIsActive(user)) return false;
         if (status === 'inactivo' && userIsActive(user)) return false;
@@ -196,26 +261,86 @@ function renderAdminUsuarios() {
     users.forEach(user => {
         const isSelf = Number(user.id) === selfId;
         const registro = user.registro_profesional ? `Reg. ${user.registro_profesional}` : '';
+        const lastAccess = formatServerTimestamp(user.ultimo_acceso);
+
         const row = document.createElement('tr');
         if (!userIsActive(user)) row.className = 'is-muted';
-        row.innerHTML = `<td><strong>${escapeHTML(user.usuario)}</strong>${isSelf ? ' <span class="status-badge">Usted</span>' : ''}</td><td>${escapeHTML(user.nombre_completo)}${registro ? `<span class="table-secondary">${escapeHTML(registro)}</span>` : ''}</td><td>${escapeHTML(roleName(user.rol))}</td><td>${userStatusHTML(user)}</td><td class="tabular-nums">${escapeHTML(formatServerTimestamp(user.ultimo_acceso))}</td><td></td>`;
-        row.lastElementChild.append(userActions(user));
+
+        const loginCell = document.createElement('td');
+        const loginStrong = document.createElement('strong');
+        loginStrong.textContent = String(user.usuario || '');
+        loginCell.append(loginStrong);
+        if (isSelf) {
+            const selfBadge = document.createElement('span');
+            selfBadge.className = 'status-badge';
+            selfBadge.textContent = 'Usted';
+            loginCell.append(document.createTextNode(' '), selfBadge);
+        }
+
+        const nameCell = document.createElement('td');
+        nameCell.append(document.createTextNode(String(user.nombre_completo || '')));
+        if (registro) {
+            const regSpan = document.createElement('span');
+            regSpan.className = 'table-secondary';
+            regSpan.textContent = registro;
+            nameCell.append(regSpan);
+        }
+
+        const roleCell = document.createElement('td');
+        roleCell.textContent = roleName(user.rol);
+
+        const statusCell = document.createElement('td');
+        statusCell.append(createUserStatusBadge(user));
+
+        const accessCell = document.createElement('td');
+        accessCell.className = 'tabular-nums';
+        accessCell.textContent = lastAccess;
+
+        const actionsCell = document.createElement('td');
+        actionsCell.append(userActions(user));
+
+        row.append(loginCell, nameCell, roleCell, statusCell, accessCell, actionsCell);
         body.append(row);
-        const card = document.createElement('article');
-        card.className = 'record-card';
-        card.innerHTML = `<div class="record-identity"><div><h3>${escapeHTML(user.nombre_completo)}</h3><p>${escapeHTML(user.usuario)} · ${escapeHTML(roleName(user.rol))}${isSelf ? ' · Usted' : ''}</p></div>${userStatusHTML(user)}</div><p class="record-meta"><span>Último acceso: ${escapeHTML(formatServerTimestamp(user.ultimo_acceso))}</span>${registro ? `<span>${escapeHTML(registro)}</span>` : ''}</p>`;
-        card.append(userActions(user));
-        cards?.append(card);
+
+        if (cards) {
+            const card = document.createElement('article');
+            card.className = 'record-card';
+            const identity = document.createElement('div');
+            identity.className = 'record-identity';
+            const who = document.createElement('div');
+            const heading = document.createElement('h3');
+            heading.textContent = String(user.nombre_completo || '');
+            const sub = document.createElement('p');
+            sub.textContent = `${user.usuario || ''} · ${roleName(user.rol)}${isSelf ? ' · Usted' : ''}`;
+            who.append(heading, sub);
+            identity.append(who, createUserStatusBadge(user));
+
+            const meta = document.createElement('p');
+            meta.className = 'record-meta';
+            const accessSpan = document.createElement('span');
+            accessSpan.textContent = `Último acceso: ${lastAccess}`;
+            meta.append(accessSpan);
+            if (registro) {
+                const regMeta = document.createElement('span');
+                regMeta.textContent = registro;
+                meta.append(regMeta);
+            }
+            card.append(identity, meta, userActions(user));
+            cards.append(card);
+        }
     });
+    const totalBase = Math.max(adminUsuariosTotalGeneral, users.length);
+    const filters = adminUsuariosFilters();
+    const isFiltered = Boolean(filters.q || filters.rol || filters.estado);
     const count = document.getElementById('adminUsuariosCount');
-    if (count) count.textContent = users.length === adminUsuarios.length ? `${users.length} ${users.length === 1 ? 'usuario' : 'usuarios'}` : `${users.length} de ${adminUsuarios.length}`;
+    if (count) count.textContent = !isFiltered ? `${users.length} ${users.length === 1 ? 'usuario' : 'usuarios'}` : `${users.length} de ${totalBase}`;
     setVisible(document.getElementById('adminUsuariosTableWrap'), users.length > 0);
     setVisible(cards, users.length > 0);
     const empty = document.getElementById('adminUsuariosEmpty');
     setVisible(empty, !users.length, 'flex');
     if (empty && !users.length) {
-        empty.querySelector('h3').textContent = adminUsuarios.length ? 'Sin coincidencias' : 'Aún no hay usuarios';
-        empty.querySelector('p').textContent = adminUsuarios.length ? 'Cambie la búsqueda o los filtros.' : 'Cree la primera cuenta del personal.';
+        empty.querySelector('h3').textContent = totalBase ? 'Sin coincidencias' : 'Aún no hay usuarios';
+        empty.querySelector('p').textContent = totalBase ? 'Cambie la búsqueda o los filtros.' : 'Cree la primera cuenta del personal.';
     }
 }
 function userPayload(user, overrides = {}) {
@@ -389,9 +514,10 @@ document.addEventListener('keydown', event => {
 function fillAuditUserFilter() {
     const select = document.getElementById('auditUsuario');
     if (!select) return;
+    const source = adminUsuariosCatalog.length ? adminUsuariosCatalog : adminUsuarios;
     const value = select.value;
     select.replaceChildren(new Option('Todos los usuarios', ''));
-    [...adminUsuarios].sort((a, b) => String(a.usuario).localeCompare(String(b.usuario), 'es'))
+    [...source].sort((a, b) => String(a.usuario).localeCompare(String(b.usuario), 'es'))
         .forEach(user => select.add(new Option(`${user.usuario} · ${user.nombre_completo}`, String(user.id))));
     select.value = value;
 }
@@ -431,18 +557,30 @@ function auditUserText(row) {
 function auditParameters() {
     const form = document.getElementById('adminAuditoriaForm');
     const parameters = new URLSearchParams({ pagina: String(adminAuditoriaFiltro.pagina), por_pagina: String(adminAuditoriaFiltro.por_pagina) });
-    for (const name of ['usuario_id', 'accion', 'desde', 'hasta']) {
-        const value = form?.elements.namedItem(name)?.value?.trim();
-        if (value) parameters.set(name, value);
-    }
+    const usuarioId = form?.elements.namedItem('usuario_id')?.value?.trim() || '';
+    if (/^[1-9]\d{0,9}$/.test(usuarioId)) parameters.set('usuario_id', usuarioId);
+    const accion = form?.elements.namedItem('accion')?.value?.trim() || '';
+    if (accion && Object.hasOwn(ADMIN_ACCIONES, accion)) parameters.set('accion', accion);
+    const entidad = form?.elements.namedItem('entidad')?.value?.trim() || '';
+    if (entidad && Object.hasOwn(ADMIN_ENTIDADES, entidad)) parameters.set('entidad', entidad);
+    const desde = form?.elements.namedItem('desde')?.value?.trim() || '';
+    if (/^\d{4}-\d{2}-\d{2}$/.test(desde)) parameters.set('desde', desde);
+    const hasta = form?.elements.namedItem('hasta')?.value?.trim() || '';
+    if (/^\d{4}-\d{2}-\d{2}$/.test(hasta)) parameters.set('hasta', hasta);
+    const q = sanitizeAdminSearch(form?.elements.namedItem('q')?.value || document.getElementById('auditBuscar')?.value);
+    if (q) parameters.set('q', q);
     return parameters;
 }
 async function loadAuditoria() {
     if (!vistaPuede('auditoria.ver')) return;
+    clearTimeout(adminAuditoriaSearchTimer);
+    adminAuditoriaSearchTimer = null;
     fillAuditActionFilter();
     const form = document.getElementById('adminAuditoriaForm');
-    const desde = form?.elements.namedItem('desde')?.value;
-    const hasta = form?.elements.namedItem('hasta')?.value;
+    const desde = form?.elements.namedItem('desde')?.value || '';
+    const hasta = form?.elements.namedItem('hasta')?.value || '';
+    if (desde && !/^\d{4}-\d{2}-\d{2}$/.test(desde)) { handleInlineErrors({ desde: 'Indique una fecha válida (AAAA-MM-DD).' }, 'adminAuditoriaForm'); return; }
+    if (hasta && !/^\d{4}-\d{2}-\d{2}$/.test(hasta)) { handleInlineErrors({ hasta: 'Indique una fecha válida (AAAA-MM-DD).' }, 'adminAuditoriaForm'); return; }
     if (desde && hasta && hasta < desde) { handleInlineErrors({ hasta: 'La fecha final debe ser igual o posterior a la inicial.' }, 'adminAuditoriaForm'); return; }
     clearInlineErrors('adminAuditoriaForm');
     const version = ++adminAuditoriaVersion;
@@ -488,14 +626,81 @@ function renderAuditoria(rows, meta) {
         const action = ADMIN_ACCIONES[row.accion] || row.accion || '—';
         const detail = auditDetailText(row.detalle);
         const when = formatServerTimestamp(row.creado_en);
-        const failed = row.accion === 'login_fallido';
+        const entity = auditEntityText(row);
+        const failed = row.accion === 'login_fallido' || row.accion === 'cambiar_password_fallido';
+
         const tr = document.createElement('tr');
-        tr.innerHTML = `<td class="tabular-nums">${escapeHTML(when)}</td><td>${escapeHTML(user.main)}${user.secondary ? `<span class="table-secondary">${escapeHTML(user.secondary)}</span>` : ''}</td><td>${failed ? `<span class="status-badge status-pending">${escapeHTML(action)}</span>` : escapeHTML(action)}</td><td>${escapeHTML(auditEntityText(row))}</td><td class="audit-detail">${escapeHTML(detail || '—')}</td><td class="tabular-nums">${escapeHTML(row.ip || '—')}</td>`;
+        const whenCell = document.createElement('td');
+        whenCell.className = 'tabular-nums';
+        whenCell.textContent = when;
+
+        const userCell = document.createElement('td');
+        userCell.append(document.createTextNode(user.main));
+        if (user.secondary) {
+            const loginSpan = document.createElement('span');
+            loginSpan.className = 'table-secondary';
+            loginSpan.textContent = user.secondary;
+            userCell.append(loginSpan);
+        }
+
+        const actionCell = document.createElement('td');
+        if (failed) {
+            const badge = document.createElement('span');
+            badge.className = 'status-badge status-pending';
+            badge.textContent = action;
+            actionCell.append(badge);
+        } else {
+            actionCell.textContent = action;
+        }
+
+        const entityCell = document.createElement('td');
+        entityCell.textContent = entity;
+
+        const detailCell = document.createElement('td');
+        detailCell.className = 'audit-detail';
+        detailCell.textContent = detail || '—';
+
+        const ipCell = document.createElement('td');
+        ipCell.className = 'tabular-nums';
+        ipCell.textContent = String(row.ip || '—');
+
+        tr.append(whenCell, userCell, actionCell, entityCell, detailCell, ipCell);
         body.append(tr);
-        const card = document.createElement('article');
-        card.className = 'record-card';
-        card.innerHTML = `<div class="record-identity"><div><h3>${escapeHTML(action)}</h3><p>${escapeHTML(user.main)}${user.secondary ? ` · ${escapeHTML(user.secondary)}` : ''}</p></div></div><p class="record-meta"><span>${escapeHTML(when)}</span><span>${escapeHTML(auditEntityText(row))}</span>${row.ip ? `<span>IP ${escapeHTML(row.ip)}</span>` : ''}</p>${detail ? `<p class="record-meta audit-detail">${escapeHTML(detail)}</p>` : ''}`;
-        cards?.append(card);
+
+        if (cards) {
+            const card = document.createElement('article');
+            card.className = 'record-card';
+            const identity = document.createElement('div');
+            identity.className = 'record-identity';
+            const who = document.createElement('div');
+            const heading = document.createElement('h3');
+            heading.textContent = action;
+            const sub = document.createElement('p');
+            sub.textContent = `${user.main}${user.secondary ? ` · ${user.secondary}` : ''}`;
+            who.append(heading, sub);
+            identity.append(who);
+
+            const metaP = document.createElement('p');
+            metaP.className = 'record-meta';
+            const whenSpan = document.createElement('span');
+            whenSpan.textContent = when;
+            const entSpan = document.createElement('span');
+            entSpan.textContent = entity;
+            metaP.append(whenSpan, entSpan);
+            if (row.ip) {
+                const ipSpan = document.createElement('span');
+                ipSpan.textContent = `IP ${row.ip}`;
+                metaP.append(ipSpan);
+            }
+            card.append(identity, metaP);
+            if (detail) {
+                const detailP = document.createElement('p');
+                detailP.className = 'record-meta audit-detail';
+                detailP.textContent = detail;
+                card.append(detailP);
+            }
+            cards.append(card);
+        }
     });
     const total = Number(meta?.total ?? rows.length);
     const count = document.getElementById('adminAuditoriaCount');
@@ -511,10 +716,43 @@ document.getElementById('adminAuditoriaForm')?.addEventListener('submit', event 
 });
 document.getElementById('auditLimpiar')?.addEventListener('click', () => {
     document.getElementById('adminAuditoriaForm')?.reset();
+    clearInlineErrors('adminAuditoriaForm');
     adminAuditoriaFiltro.pagina = 1;
     loadAuditoria();
 });
-for (const id of ['adminFiltroUsuario', 'adminFiltroRol', 'adminFiltroEstado']) {
-    document.getElementById(id)?.addEventListener(id === 'adminFiltroUsuario' ? 'input' : 'change', debounce(renderAdminUsuarios, 120));
+const auditBuscarInput = document.getElementById('auditBuscar');
+auditBuscarInput?.addEventListener('input', () => {
+    clearTimeout(adminAuditoriaSearchTimer);
+    adminAuditoriaSearchTimer = setTimeout(() => {
+        adminAuditoriaFiltro.pagina = 1;
+        loadAuditoria();
+    }, 300);
+});
+auditBuscarInput?.addEventListener('keydown', event => {
+    if (event.key === 'Escape' && auditBuscarInput.value) {
+        event.preventDefault();
+        auditBuscarInput.value = '';
+        adminAuditoriaFiltro.pagina = 1;
+        loadAuditoria();
+    }
+});
+
+const adminFiltroUsuarioInput = document.getElementById('adminFiltroUsuario');
+adminFiltroUsuarioInput?.addEventListener('input', () => {
+    clearTimeout(adminUsuariosSearchTimer);
+    adminUsuariosSearchTimer = setTimeout(() => { loadAdminUsuarios(); }, 280);
+});
+adminFiltroUsuarioInput?.addEventListener('keydown', event => {
+    if (event.key === 'Enter') {
+        event.preventDefault();
+        loadAdminUsuarios();
+    } else if (event.key === 'Escape' && adminFiltroUsuarioInput.value) {
+        event.preventDefault();
+        adminFiltroUsuarioInput.value = '';
+        loadAdminUsuarios();
+    }
+});
+for (const id of ['adminFiltroRol', 'adminFiltroEstado']) {
+    document.getElementById(id)?.addEventListener('change', () => loadAdminUsuarios());
 }
 initAdminTabs();

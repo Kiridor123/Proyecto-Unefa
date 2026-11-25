@@ -3,55 +3,20 @@ declare(strict_types=1);
 
 define('API_HTML_RESPONSE', true);
 require_once __DIR__ . '/../config/bootstrap.php';
+require_once __DIR__ . '/../config/Morbilidad.php';
 require_once __DIR__ . '/print_common.php';
 api_method('GET');
 api_require('reportes.ver');
 api_require('clinica.ver');
 
-const MORBILIDAD_MAX_ANIOS = 5;
 const MORBILIDAD_TOP_DIAGNOSTICOS = 10;
 
-$errors = [];
-[$fecha_inicio, $fecha_fin] = Config\Validation::dateRange($_GET, $errors);
-if (!$errors && (new DateTimeImmutable($fecha_inicio))->modify('+' . MORBILIDAD_MAX_ANIOS . ' years') < new DateTimeImmutable($fecha_fin)) {
-    $errors['fecha_fin'] = 'El rango no puede superar ' . MORBILIDAD_MAX_ANIOS . ' años.';
-}
-api_validate($errors);
-
 $db = api_db();
-
-// Filtro opcional por categoría institucional (p. ej. solo estudiantes para una jornada estudiantil).
-$categoria_id = (isset($_GET['categoria_id']) && $_GET['categoria_id'] !== '') ? api_id($_GET['categoria_id'], 'categoria_id') : null;
-$categoria_nombre = null;
-if ($categoria_id !== null) {
-    $stmtCategoria = $db->prepare('SELECT nombre FROM categorias_institucionales WHERE id = ?');
-    $stmtCategoria->execute([$categoria_id]);
-    $categoria_nombre = $stmtCategoria->fetchColumn();
-    if ($categoria_nombre === false) {
-        throw new ApiException('La categoría seleccionada no existe.', 422, ['categoria_id' => 'Seleccione una categoría válida.']);
-    }
-}
-
-$sql = "
-    SELECT c.id, c.paciente_id, c.fecha_circunstancia, c.diagnostico, c.resumen,
-           c.vital_ta, c.vital_fc, c.vital_peso_talla,
-           p.cedula, p.nombres, p.apellidos, p.sexo, p.fecha_nacimiento, p.carrera, p.semestre, p.telefono,
-           cat.nombre AS categoria
-    FROM consultas c
-    JOIN pacientes p ON c.paciente_id = p.id
-    JOIN categorias_institucionales cat ON p.categoria_id = cat.id
-    WHERE c.fecha_circunstancia BETWEEN ? AND ?
-";
-$params = [$fecha_inicio, $fecha_fin];
-if ($categoria_id !== null) {
-    $sql .= ' AND p.categoria_id = ?';
-    $params[] = $categoria_id;
-}
-$sql .= ' ORDER BY c.fecha_circunstancia ASC, c.id ASC';
-
-$stmt = $db->prepare($sql);
-$stmt->execute($params);
-$consultas = $stmt->fetchAll();
+$filters = morbilidad_filtros($_GET, $db);
+$fecha_inicio = $filters['fecha_inicio'];
+$fecha_fin = $filters['fecha_fin'];
+$categoria_nombre = $filters['categoria_nombre'];
+$consultas = morbilidad_filas($db, $filters, null, true);
 
 // --- Agregados del período ---------------------------------------------------------------
 $total_consultas = count($consultas);
@@ -99,13 +64,9 @@ $sexos_visibles = array_values(array_filter($sexos, static fn ($sexo) => $totale
 
 $fecha_inicio_f = print_fecha_corta($fecha_inicio);
 $fecha_fin_f = print_fecha_corta($fecha_fin);
+$hay_filtros_extra = $categoria_nombre !== null || $filters['sexo'] !== '' || $filters['con_reposo'] !== '' || $filters['q'] !== '';
 
-api_audit('imprimir_morbilidad', null, null, array_filter([
-    'fecha_inicio' => $fecha_inicio,
-    'fecha_fin' => $fecha_fin,
-    'categoria_id' => $categoria_id,
-    'registros' => $total_consultas,
-], static fn ($valor) => $valor !== null));
+api_audit('imprimir_morbilidad', 'reporte', null, morbilidad_audit_detail($filters, $total_consultas));
 
 print_page_start('Morbilidad ' . $fecha_inicio_f . ' al ' . $fecha_fin_f, [
     'boton' => 'Imprimir reporte',
@@ -149,6 +110,15 @@ print_page_start('Morbilidad ' . $fecha_inicio_f . ' al ' . $fecha_fin_f, [
                     <?php else: ?>
                         · <span class="etq">Categoría:</span> todas
                     <?php endif; ?>
+                    <?php if ($filters['sexo'] !== ''): ?>
+                        · <span class="etq">Sexo:</span> <?= print_e($filters['sexo']) ?>
+                    <?php endif; ?>
+                    <?php if ($filters['con_reposo'] !== ''): ?>
+                        · <span class="etq">Reposo:</span> <?= $filters['con_reposo'] === '1' ? 'con reposo' : 'sin reposo' ?>
+                    <?php endif; ?>
+                    <?php if ($filters['q'] !== ''): ?>
+                        · <span class="etq">Búsqueda:</span> «<?= print_e($filters['q']) ?>»
+                    <?php endif; ?>
                 </p>
             </div>
 
@@ -179,7 +149,11 @@ print_page_start('Morbilidad ' . $fecha_inicio_f . ' al ' . $fecha_fin_f, [
                 <tbody>
                     <?php if ($total_consultas === 0): ?>
                         <tr>
-                            <td colspan="13" class="centro vacio" style="padding: 16px;">No se encontraron consultas en el período seleccionado.</td>
+                            <td colspan="13" class="centro vacio" style="padding: 16px;">
+                                <?= $hay_filtros_extra
+                                    ? 'No se encontraron consultas que coincidan con los filtros seleccionados.'
+                                    : 'No se encontraron consultas en el período seleccionado.' ?>
+                            </td>
                         </tr>
                     <?php else: ?>
                         <?php foreach ($consultas as $fila):

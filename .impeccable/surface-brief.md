@@ -20,11 +20,11 @@ Concept-seed: seed:2dc76b0870da8ff7; índice asignado 7. El índice aporta tipog
 
 ## Contrato
 
-THESIS: acceder a los cuatro trabajos principales de la atención universitaria desde un sistema legible, consistente y confiable.
-OWN-WORLD: índice académico clínico; fondo frío muy claro, superficies blancas, tinta oscura, gráfica teal, tipografía Geist local, cifras tabulares y tablas con reglas suaves.
+THESIS: acceder a los cuatro trabajos principales de la atención universitaria desde un sistema legible, consistente y reconociblemente institucional (UNEFA).
+OWN-WORLD: índice institucional clínico UNEFA; barra lateral y panel de acceso en azul marino UNEFA (#0c234b) con remate dorado (#d49b1a) y escudo oficial transparente (src/assets/logo-unefa.png), lienzo clínico en porcelana clara (#f4f6fa), superficies blancas, tinta azul profundo (#101d33), gráfica azul real (#1a4b8c), tipografía Geist local, cifras tabulares y tablas con reglas suaves.
 STORY: identificar la actividad; buscar un expediente o una cita; registrar la atención; consultar el periodo y producir el formato institucional.
-FIRST VIEWPORT: sidebar etiquetada Salud UNEFA, título de sección, una acción principal, indicadores agrupados y las dos lecturas de actividad. La firma es la ruta de atención: expedientes, agenda y morbilidad como tres acciones operativas contiguas, cada una con su objeto clínico explícito.
-FORM: concept seed:2dc76b0870da8ff7, corroborado en .impeccable/questions/roll.json; draw --app achromatic-ledger, seed 1683463685, Open plane. Shell redibujada una vez porque el rail de iconos ocultaba las cuatro áreas a un personal que necesita reconocerlas por nombre. Se conserva el movimiento del estilo: chrome neutral y cifras en tinta, un solo color en los gráficos. Cara elegida: fondo frío de la atención clínica y gráfica teal #256e78. No se incorpora decoración médica.
+FIRST VIEWPORT: sidebar institucional azul marino UNEFA con escudo oficial y etiqueta Salud UNEFA, título de sección, acción principal en azul marino (#0f2a56), indicadores agrupados y las dos lecturas de actividad. La firma es la ruta de atención: expedientes, agenda y morbilidad como tres acciones operativas contiguas, cada una con su objeto clínico explícito.
+FORM: concept seed:2dc76b0870da8ff7, corroborado en .impeccable/questions/roll.json; draw --app achromatic-ledger, seed 1683463685, Open plane. Integración oficial de la identidad cromática y heráldica UNEFA manteniendo la disciplina Operate: navegación institucional azul marino con acento dorado contenido, lienzo clínico claro de alto contraste y un solo azul real (#1a4b8c) en las gráficas. No se incorpora decoración médica ni ornamento gratuito.
 
 ## Challengers del sorteo
 

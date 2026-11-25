@@ -2,7 +2,7 @@
 declare(strict_types=1);
 
 /*
- * Utilidades compartidas por los documentos imprimibles (historia, informe, reposo y morbilidad).
+ * Utilidades compartidas por los documentos imprimibles (historia, informe, reposo, récipe y morbilidad).
  * Solo define funciones: no produce salida ni consulta la base de datos por sí mismo.
  */
 
@@ -158,6 +158,60 @@ function print_header(array $lineas, array $logoIzq, ?array $logoDer = null): vo
     <?php
 }
 
+/** Encabezado institucional estándar con ambos sellos (UNEFA y MPPD), compartido por informe, reposo y récipe. */
+function print_header_institucional(): void
+{
+    print_header([
+        'República Bolivariana de Venezuela',
+        'Ministerio del Poder Popular para la Defensa',
+        PRINT_INSTITUCION,
+        'Vicerrectorado Región Los Llanos',
+        'Núcleo Portuguesa — Extensión Acarigua',
+    ], print_logo('unefa'), print_logo('mppd'));
+}
+
+/**
+ * Recuadros formales de firma y sello para documentos clínicos.
+ * Cuando $incluirDirectora es true, dibuja dos recuadros (médico y directora);
+ * cuando es false, centra un único recuadro para la firma del médico (p. ej. récipe).
+ */
+function print_firmas_recuadros(?string $medico, bool $incluirDirectora = true, string $claseExtra = ''): void
+{
+    $clases = trim('firmas-recuadros' . ($incluirDirectora ? '' : ' firmas-recuadros--uno') . ' ' . $claseExtra);
+    ?>
+    <div class="<?= print_e($clases) ?>">
+        <div class="firma-recuadro">
+            <div class="firma-recuadro-encabezado">Firma del médico</div>
+            <div class="firma-recuadro-cuerpo">
+                <div class="firma-recuadro-espacio" aria-hidden="true"></div>
+                <div class="firma-recuadro-linea"></div>
+                <div class="firma-recuadro-pie">
+                    <?php if ($medico !== null): ?>
+                        <span class="fuerte"><?= print_e($medico) ?></span>
+                    <?php else: ?>
+                        <span>Médico tratante: ______________________</span>
+                    <?php endif; ?>
+                    <span class="firma-recuadro-nota">Firma y sello médico</span>
+                </div>
+            </div>
+        </div>
+        <?php if ($incluirDirectora): ?>
+            <div class="firma-recuadro">
+                <div class="firma-recuadro-encabezado">Firma de la directora</div>
+                <div class="firma-recuadro-cuerpo">
+                    <div class="firma-recuadro-espacio" aria-hidden="true"></div>
+                    <div class="firma-recuadro-linea"></div>
+                    <div class="firma-recuadro-pie">
+                        <span class="fuerte">Directora</span>
+                        <span class="firma-recuadro-nota">Dirección UNEFA — Extensión Acarigua · Firma y sello</span>
+                    </div>
+                </div>
+            </div>
+        <?php endif; ?>
+    </div>
+    <?php
+}
+
 /** Logos disponibles (en uploads/, que solo expone los logo_*). */
 function print_logo(string $tipo): array
 {
@@ -196,8 +250,8 @@ function print_page_start(string $titulo, array $opciones = []): void
         body {
             margin: 0;
             padding: 24px 16px 48px;
-            background: #e2e8f0;
-            color: #111;
+            background: #e6ebf2;
+            color: #111827;
             font-family: Arial, "Helvetica Neue", Helvetica, sans-serif;
             font-size: 11pt;
             line-height: 1.4;
@@ -205,52 +259,98 @@ function print_page_start(string $titulo, array $opciones = []): void
         .toolbar { display: flex; flex-wrap: wrap; gap: 8px; justify-content: center; margin: 0 auto 20px; max-width: <?= $anchoHoja ?>; }
         .toolbar button {
             min-height: 40px; padding: 8px 18px; border-radius: 8px; border: 1px solid #94a3b8;
-            background: #fff; color: #0f172a; font: 600 14px/1 Arial, sans-serif; cursor: pointer;
+            background: #fff; color: #0f2c59; font: 600 14px/1 Arial, sans-serif; cursor: pointer;
         }
-        .toolbar button.primario { background: #1e3a8a; border-color: #1e3a8a; color: #fff; }
-        .toolbar button:focus-visible { outline: 3px solid #f59e0b; outline-offset: 2px; }
+        .toolbar button:hover { background: #f8fafc; border-color: #64748b; }
+        .toolbar button.primario { background: #0f2c59; border-color: #0f2c59; color: #fff; }
+        .toolbar button.primario:hover { background: #163a70; border-color: #163a70; }
+        .toolbar button:focus-visible { outline: 3px solid #c99700; outline-offset: 2px; }
         .toolbar .aviso { flex-basis: 100%; text-align: center; color: #334155; font-size: 13px; }
         .hoja {
             background: #fff; margin: 0 auto; width: 100%; max-width: <?= $anchoHoja ?>;
-            padding: <?= $margen ?>; box-shadow: 0 10px 30px rgba(15, 23, 42, .18); overflow-wrap: anywhere;
+            padding: <?= $margen ?>; box-shadow: 0 10px 30px rgba(15, 44, 89, .16); overflow-wrap: anywhere;
         }
 
-        /* Encabezado institucional */
-        .doc-header { display: flex; align-items: center; justify-content: space-between; gap: 12px; border-bottom: 1.5px solid #111; padding-bottom: 8px; margin-bottom: 12px; }
-        .doc-logo { height: 58px; width: auto; flex: 0 0 auto; }
+        /* Encabezado institucional UNEFA */
+        .doc-header {
+            position: relative; display: flex; align-items: center; justify-content: space-between; gap: 12px;
+            border-bottom: 2px solid #0f2c59; padding-bottom: 9px; margin-bottom: 14px;
+        }
+        .doc-header::after {
+            content: ""; position: absolute; left: 0; right: 0; bottom: -5px; height: 1.5px; background: #c99700;
+        }
+        .doc-logo { height: 58px; width: auto; max-width: 84px; object-fit: contain; flex: 0 0 auto; }
         .doc-logo--vacio { width: 58px; }
-        .doc-membrete { flex: 1; text-align: center; font-weight: 700; text-transform: uppercase; font-size: 8.5pt; line-height: 1.25; letter-spacing: .01em; }
-        .doc-titulo { text-align: center; margin: 14px 0 12px; font-size: 14pt; font-weight: 700; letter-spacing: .12em; text-transform: uppercase; text-decoration: underline; text-underline-offset: 5px; }
+        .doc-membrete { flex: 1; text-align: center; font-weight: 700; text-transform: uppercase; font-size: 8.5pt; line-height: 1.25; letter-spacing: .01em; color: #0f2c59; }
+        .doc-titulo {
+            text-align: center; margin: 14px 0 12px; font-size: 13.5pt; font-weight: 700; color: #0f2c59;
+            letter-spacing: .1em; text-transform: uppercase;
+            text-decoration: underline; text-decoration-color: #c99700; text-decoration-thickness: 1.5px; text-underline-offset: 5px;
+        }
 
         /* Elementos comunes */
-        .etq { font-weight: 700; color: #333; }
-        .vacio { color: #555; font-style: italic; }
+        .etq { font-weight: 700; color: #1e3a5f; }
+        .vacio { color: #526071; font-style: italic; }
         .fuerte { font-weight: 700; }
         .derecha, .tabla .derecha { text-align: right; }
         .centro, .tabla .centro { text-align: center; }
         .justificado { text-align: justify; }
         .pequeno { font-size: 8.5pt; }
         .tabla { width: 100%; border-collapse: collapse; table-layout: fixed; }
-        .tabla th, .tabla td { border: 1px solid #555; padding: 3px 5px; vertical-align: top; text-align: left; }
-        .tabla th { font-weight: 700; background: #e5e7eb; }
+        .tabla th, .tabla td { border: 1px solid #475569; padding: 3px 5px; vertical-align: top; text-align: left; }
+        .tabla th { font-weight: 700; background: #edf2f8; color: #0f2c59; }
         .seccion { margin-bottom: 10px; }
-        .seccion-titulo { font-weight: 700; text-transform: uppercase; font-size: 9.5pt; padding: 3px 6px; border: 1px solid #555; border-bottom: 0; background: #e5e7eb; break-after: avoid; page-break-after: avoid; }
+        .seccion-titulo {
+            font-weight: 700; text-transform: uppercase; font-size: 9.5pt; padding: 3px 6px;
+            border: 1px solid #475569; border-bottom: 0; background: #edf2f8; color: #0f2c59;
+            break-after: avoid; page-break-after: avoid;
+        }
+
+        /* Firmas clásicas (historia clínica y morbilidad) */
         .firmas { display: flex; justify-content: space-around; gap: 24px; text-align: center; break-inside: avoid; page-break-inside: avoid; }
-        .firma { flex: 1; max-width: 240px; display: flex; flex-direction: column; align-items: center; font-size: 8.5pt; font-weight: 700; color: #222; }
-        .firma .linea { width: 100%; border-bottom: 1px solid #111; height: 46px; margin-bottom: 4px; }
-        .firma .detalle { font-weight: 400; margin-top: 2px; }
-        .reimpresion { margin-top: 10px; font-size: 7.5pt; color: #555; text-align: right; }
+        .firma { flex: 1; max-width: 240px; display: flex; flex-direction: column; align-items: center; font-size: 8.5pt; font-weight: 700; color: #0f2c59; }
+        .firma .linea { width: 100%; border-bottom: 1px solid #1e293b; height: 46px; margin-bottom: 4px; }
+        .firma .detalle { font-weight: 400; color: #1f2937; margin-top: 2px; }
+
+        /* Recuadros formales de firma y sello */
+        .firmas-recuadros {
+            display: grid; grid-template-columns: 1fr 1fr; gap: 18px;
+            break-inside: avoid; page-break-inside: avoid;
+        }
+        .firmas-recuadros--uno { grid-template-columns: minmax(250px, 320px); justify-content: center; }
+        .firma-recuadro {
+            border: 1.25px solid #163a70; border-radius: 3px; background: #fff;
+            display: flex; flex-direction: column; break-inside: avoid; page-break-inside: avoid;
+        }
+        .firma-recuadro-encabezado {
+            background: #edf2f8; border-bottom: 1px solid #cbd5e1; color: #0f2c59;
+            text-align: center; font-size: 8.5pt; font-weight: 700; text-transform: uppercase;
+            letter-spacing: .04em; padding: 4px 8px;
+        }
+        .firma-recuadro-cuerpo {
+            flex: 1; display: flex; flex-direction: column; justify-content: flex-end;
+            padding: 8px 12px 9px; text-align: center;
+        }
+        .firma-recuadro-espacio { height: 54px; }
+        .firma-recuadro-linea { width: 84%; margin: 0 auto 5px; border-bottom: 1px solid #1e293b; }
+        .firma-recuadro-pie { display: flex; flex-direction: column; gap: 2px; font-size: 8.5pt; color: #111827; line-height: 1.25; }
+        .firma-recuadro-nota { font-size: 7.5pt; color: #475569; }
+
+        .reimpresion { margin-top: 10px; font-size: 7.5pt; color: #526071; text-align: right; }
 
         @media print {
             body { padding: 0 !important; margin: 0 !important; background: #fff !important; min-height: 0 !important; }
             .toolbar { display: none !important; }
             .hoja { max-width: none; width: 100%; padding: 0 !important; margin: 0 !important; box-shadow: none !important; }
-            .tabla th, .seccion-titulo { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+            .doc-header::after, .tabla th, .seccion-titulo, .firma-recuadro-encabezado {
+                -webkit-print-color-adjust: exact; print-color-adjust: exact;
+            }
             a { color: inherit; text-decoration: none; }
         }
         @media screen and (max-width: 640px) {
             body { padding: 12px 0 32px; }
             .hoja { padding: 16px; }
+            .firmas-recuadros { grid-template-columns: 1fr; }
         }
         <?= $opciones['css'] ?? '' ?>
     </style>

@@ -14,7 +14,7 @@
             </div>
         </div>
         <div class="toolbar">
-            <div class="field search-field"><label for="adminFiltroUsuario">Buscar usuario</label><div class="input-icon"><i class="ph ph-magnifying-glass" aria-hidden="true"></i><input type="search" id="adminFiltroUsuario" placeholder="Usuario o nombre" autocomplete="off"></div></div>
+            <div class="field search-field"><label for="adminFiltroUsuario">Buscar usuario</label><div class="input-icon"><i class="ph ph-magnifying-glass" aria-hidden="true"></i><input type="search" id="adminFiltroUsuario" placeholder="Usuario o nombre" autocomplete="off" maxlength="100" enterkeyhint="search"></div></div>
             <div class="field filter-field"><label for="adminFiltroRol">Rol</label><select id="adminFiltroRol"><option value="">Todos los roles</option><option value="administrador">Administrador</option><option value="medico">Médico</option><option value="asistente">Asistente</option></select></div>
             <div class="field filter-field"><label for="adminFiltroEstado">Estado</label><select id="adminFiltroEstado"><option value="">Todos</option><option value="activo">Activos</option><option value="inactivo">Inactivos</option><option value="bloqueado">Bloqueados temporalmente</option></select></div>
         </div>

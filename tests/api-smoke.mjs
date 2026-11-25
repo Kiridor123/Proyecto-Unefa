@@ -400,7 +400,7 @@ check('Dashboard lists today agenda and rests ending soon', () => {
   assert.ok(result.json.data.reposos_por_vencer.some(row => Number(row.consulta_id) === Number(consultId)));
 });
 
-for (const path of [`print_historia.php?paciente_id=${patientId}`, `print_informe.php?consulta_id=${consultId}`, `print_reposo.php?consulta_id=${consultId}`, `print_morbilidad.php?fecha_inicio=${today}&fecha_fin=${today}`]) {
+for (const path of [`print_historia.php?paciente_id=${patientId}`, `print_informe.php?consulta_id=${consultId}`, `print_reposo.php?consulta_id=${consultId}`, `print_recipe.php?consulta_id=${consultId}`, `print_morbilidad.php?fecha_inicio=${today}&fecha_fin=${today}`]) {
   const response = await doctor.raw(`/api/${path}`);
   const html = await response.text();
   check(`Printable document ${path.split('?')[0]} escapes patient markup`, () => {
@@ -409,6 +409,287 @@ for (const path of [`print_historia.php?paciente_id=${patientId}`, `print_inform
     assert.ok(html.includes('&lt;img'));
     assert.ok(response.headers.get('content-security-policy'));
   });
+}
+
+// ---------------------------------------------------------------------------
+// Formatos clínicos imprimibles (reposo, informe, historia, récipe)
+// ---------------------------------------------------------------------------
+function formatDdMmYyyy(isoDate) {
+  const [y, m, d] = isoDate.split('-');
+  return `${d}/${m}/${y}`;
+}
+function expectedAgeAt(birthIso, refIso) {
+  const [by, bm, bd] = birthIso.split('-').map(Number);
+  const [ry, rm, rd] = refIso.split('-').map(Number);
+  let age = ry - by;
+  if (rm < bm || (rm === bm && rd < bd)) age -= 1;
+  return age;
+}
+function extractHeaderBlock(html) {
+  const match = html.match(/<header class="doc-header">[\s\S]*?<\/header>/);
+  return match ? match[0].replace(/\s+/g, ' ').trim() : '';
+}
+
+const anonRecipe = await anonymous.raw(`/api/print_recipe.php?consulta_id=${consultId}`);
+check('print_recipe.php requires authentication (401)', () => assert.equal(anonRecipe.status, 401));
+const anonReposo = await anonymous.raw(`/api/print_reposo.php?consulta_id=${consultId}`);
+check('print_reposo.php requires authentication (401)', () => assert.equal(anonReposo.status, 401));
+const anonInforme = await anonymous.raw(`/api/print_informe.php?consulta_id=${consultId}`);
+check('print_informe.php requires authentication (401)', () => assert.equal(anonInforme.status, 401));
+
+const reposoRes = await doctor.raw(`/api/print_reposo.php?consulta_id=${consultId}`);
+const reposoHtml = await reposoRes.text();
+const expectedAge = expectedAgeAt(patient.fecha_nacimiento, today);
+check('print_reposo.php displays all required clinical fields and 2 signature boxes', () => {
+  assert.equal(reposoRes.status, 200);
+  assert.ok(reposoHtml.includes('&lt;img src=x onerror=alert(1)&gt;'));
+  assert.ok(reposoHtml.includes('O&#039;Connor') || reposoHtml.includes("O'Connor"));
+  assert.ok(reposoHtml.includes(`${expectedAge} años`), `Expected age ${expectedAge} años`);
+  assert.ok(reposoHtml.includes(patient.cedula));
+  assert.ok(reposoHtml.includes('Diagnóstico corregido'));
+  assert.ok(reposoHtml.includes('dos (2) días'));
+  assert.ok(reposoHtml.includes(formatDdMmYyyy(today)));
+  assert.ok(reposoHtml.includes(formatDdMmYyyy(tomorrow)));
+  assert.ok(reposoHtml.includes(consultation.plan_tratamiento));
+  assert.match(reposoHtml, /Firma del m[eé]dico/i);
+  assert.match(reposoHtml, /Firma de la directora/i);
+  assert.equal((reposoHtml.match(/class="firma-recuadro"/g) || []).length, 2);
+  assert.ok(reposoHtml.includes('logo_unefa_1.png') && reposoHtml.includes('logo_unefa_2.png'));
+});
+const noReposoConsultId = firstSave.json.consulta_id;
+const reposoMissingRes = await doctor.raw(`/api/print_reposo.php?consulta_id=${noReposoConsultId}`);
+check('print_reposo.php rejects consultation without rest dates (422)', () => assert.equal(reposoMissingRes.status, 422));
+
+const informeRes = await doctor.raw(`/api/print_informe.php?consulta_id=${consultId}`);
+const informeHtml = await informeRes.text();
+check('print_informe.php omits reposo completely and includes both signature boxes', () => {
+  assert.equal(informeRes.status, 200);
+  assert.ok(!/reposo/i.test(informeHtml), 'Informe médico must not contain any reposo section or wording');
+  assert.match(informeHtml, /Firma del m[eé]dico/i);
+  assert.match(informeHtml, /Firma de la directora/i);
+  assert.equal((informeHtml.match(/class="firma-recuadro"/g) || []).length, 2);
+  assert.ok(informeHtml.includes('logo_unefa_1.png') && informeHtml.includes('logo_unefa_2.png'));
+});
+
+const historiaRes = await doctor.raw(`/api/print_historia.php?paciente_id=${patientId}`);
+const historiaHtml = await historiaRes.text();
+check('print_historia.php omits MÉDICO EVALUADOR completely', () => {
+  assert.equal(historiaRes.status, 200);
+  assert.ok(!/m[eé]dico\s+evaluador/i.test(historiaHtml), 'Historia médica must not include MÉDICO EVALUADOR');
+  assert.ok(historiaHtml.includes('FIRMA DEL ESTUDIANTE'));
+  assert.ok(historiaHtml.includes('SELLO MÉDICO'));
+});
+
+const recipeRes = await doctor.raw(`/api/print_recipe.php?consulta_id=${consultId}`);
+const recipeHtml = await recipeRes.text();
+check('print_recipe.php renders prescription with matching institutional seals, patient data and Rx', () => {
+  assert.equal(recipeRes.status, 200);
+  const recipeHeader = extractHeaderBlock(recipeHtml);
+  const informeHeader = extractHeaderBlock(informeHtml);
+  const reposoHeader = extractHeaderBlock(reposoHtml);
+  assert.ok(recipeHeader.length > 0, 'Institutional header present in print_recipe.php');
+  assert.equal(recipeHeader, informeHeader, 'print_recipe.php header seals must match print_informe.php');
+  assert.equal(recipeHeader, reposoHeader, 'print_recipe.php header seals must match print_reposo.php');
+  assert.ok(recipeHtml.includes('logo_unefa_1.png') && recipeHtml.includes('logo_unefa_2.png'));
+  assert.ok(recipeHtml.includes(patient.cedula));
+  assert.ok(recipeHtml.includes(`${expectedAge} años`));
+  assert.ok(recipeHtml.includes('Rx'));
+  assert.ok(recipeHtml.includes(consultation.plan_tratamiento));
+  assert.match(recipeHtml, /Firma del m[eé]dico/i);
+});
+const recipeNotFound = await doctor.raw('/api/print_recipe.php?consulta_id=999999');
+check('print_recipe.php returns 404 for unknown consultation', () => assert.equal(recipeNotFound.status, 404));
+const recipeBadId = await doctor.raw('/api/print_recipe.php?consulta_id=abc');
+check('print_recipe.php returns 422 for malformed consulta_id', () => assert.equal(recipeBadId.status, 422));
+const recipePost = await doctor.raw(`/api/print_recipe.php?consulta_id=${consultId}`, { method: 'POST' });
+check('print_recipe.php rejects non-GET method (405)', () => assert.equal(recipePost.status, 405));
+
+// ---------------------------------------------------------------------------
+// Búsqueda, filtros avanzados y seguridad (Morbilidad + todas las áreas)
+// ---------------------------------------------------------------------------
+const accentCedulaNum = String(28000000 + (Date.now() % 999999));
+const accentPatient = {
+  cedula: `V-${accentCedulaNum}`,
+  nombres: 'José Ángel',
+  apellidos: 'Peña Núñez',
+  categoria: String(patient.categoria),
+  sexo: 'Masculino',
+  fecha_nacimiento: '1998-05-14',
+  carrera: 'Ingeniería de Sistemas',
+  semestre: 'VI',
+  solo_paciente: '0',
+  fecha_circunstancia: today,
+  motivo_consulta: '+SUM(1,2) Control faringitis',
+  enfermedad_actual: 'Dolor faríngeo agudo',
+  diagnostico: 'Faringitis aguda estreptocócica',
+  plan_tratamiento: 'Amoxicilina 500mg cada 8 horas por 7 días',
+  inicio_reposo: today,
+  fin_reposo: dayAfter,
+};
+result = await doctor.api('save_registro.php', { fields: accentPatient });
+check('Accented clinical fixture saved for search & security verification', () => assert.equal(result.response.status, 200, result.json.message));
+const accentConsultId = result.json.consulta_id;
+result = await doctor.api(`get_pacientes.php?q=${encodeURIComponent(accentPatient.cedula)}`);
+const accentPatientId = result.json.data.find(row => row.cedula === accentPatient.cedula)?.id;
+assert.ok(accentPatientId, 'Accented patient ID found');
+result = await doctor.api('save_cita.php', { fields: { paciente_id: accentPatientId, fecha_cita: `${dayAfter}T10:30`, motivo: 'Revisión faringitis aguda' } });
+check('Accented appointment fixture saved', () => assert.equal(result.response.status, 201, result.json.message));
+
+// Morbilidad: búsqueda multi-palabra, insensible a mayúsculas/acentos, cédula y filtros combinados.
+for (const [label, qs] of [
+  ['multi-word accent-insensitive name', `q=${encodeURIComponent('pena jose')}`],
+  ['diagnosis keyword', `q=${encodeURIComponent('estreptococica')}`],
+  ['treatment keyword', `q=${encodeURIComponent('amoxicilina 500mg')}`],
+  ['career keyword', `q=${encodeURIComponent('ingenieria sistemas')}`],
+  ['cédula without hyphen', `q=${encodeURIComponent('v' + accentCedulaNum)}`],
+  ['cédula with thousand dots', `q=${encodeURIComponent(accentCedulaNum.replace(/^(\d{2})(\d{3})(\d{3})$/, '$1.$2.$3'))}`],
+  ['combined sexo + con_reposo + categoria_id', `sexo=Masculino&con_reposo=1&categoria_id=${patient.categoria}&q=${encodeURIComponent('nunez')}`],
+  ['desde/hasta date aliases', `desde=${today}&hasta=${today}&q=${encodeURIComponent('amoxicilina')}`],
+]) {
+  const path = qs.includes('desde=')
+    ? `get_morbilidad.php?${qs}`
+    : `get_morbilidad.php?fecha_inicio=${today}&fecha_fin=${today}&${qs}`;
+  result = await doctor.api(path);
+  check(`Morbilidad search (${label})`, () => {
+    assert.equal(result.response.status, 200, result.json.message);
+    assert.ok(result.json.data.some(row => Number(row.id) === Number(accentConsultId)));
+  });
+}
+result = await doctor.api(`get_morbilidad.php?fecha_inicio=${today}&fecha_fin=${today}&con_reposo=0&q=${encodeURIComponent(accentPatient.cedula)}`);
+check('Morbilidad con_reposo=0 excludes consultations with reposo', () => {
+  assert.equal(result.response.status, 200);
+  assert.equal(result.json.data.length, 0);
+});
+
+// Paridad de filtros en export_morbilidad.php y print_morbilidad.php + protección CSV formula injection y XSS.
+const filteredCsvRes = await doctor.raw(`/api/export_morbilidad.php?fecha_inicio=${today}&fecha_fin=${today}&sexo=Masculino&con_reposo=1&q=${encodeURIComponent('pena amoxicilina')}`);
+const filteredCsv = await filteredCsvRes.text();
+check('export_morbilidad.php respects search/filter parity and neutralizes +SUM formula', () => {
+  assert.equal(filteredCsvRes.status, 200);
+  assert.ok(filteredCsv.includes(accentPatient.cedula));
+  assert.ok(!filteredCsv.includes(patient.cedula));
+  assert.ok(filteredCsv.includes("'+SUM(1,2)"));
+  assert.ok(!/;"?\+SUM/.test(filteredCsv));
+});
+const filteredPrintRes = await doctor.raw(`/api/print_morbilidad.php?fecha_inicio=${today}&fecha_fin=${today}&sexo=Masculino&con_reposo=1&q=${encodeURIComponent('pena <script>alert(1)</script>')}`);
+const filteredPrintHtml = await filteredPrintRes.text();
+check('print_morbilidad.php escapes active search term in header', () => {
+  assert.equal(filteredPrintRes.status, 200);
+  assert.ok(!filteredPrintHtml.includes('<script>alert(1)</script>'));
+  assert.ok(filteredPrintHtml.includes('&lt;script&gt;'));
+});
+
+// Otras áreas: búsqueda normal, acentos y cédula.
+result = await doctor.api(`get_pacientes.php?q=${encodeURIComponent('nunez angel')}&sexo=Masculino&orden=nombre`);
+check('get_pacientes.php accent-insensitive multi-word + sexo + orden', () => {
+  assert.equal(result.response.status, 200);
+  assert.ok(result.json.data.some(row => row.id === accentPatientId));
+});
+result = await doctor.api(`get_citas.php?q=${encodeURIComponent('revision faringitis nunez')}`);
+check('get_citas.php searches across accent-folded name and motivo', () => {
+  assert.equal(result.response.status, 200);
+  assert.ok(result.json.data.some(row => row.paciente_id === accentPatientId));
+});
+result = await admin.api('get_auditoria.php?accion=imprimir_recipe&entidad=consulta');
+check('get_auditoria.php filters by imprimir_recipe action and entidad', () => {
+  assert.equal(result.response.status, 200);
+  assert.ok(result.json.data.some(row => Number(row.entidad_id) === Number(consultId)));
+});
+result = await admin.api(`usuarios.php?q=${encodeURIComponent(`${accounts.medico.usuario} MPPS 12345`)}&rol=medico&estado=activo&orden=nombre&pagina=1&por_pagina=10`);
+check('usuarios.php filters by multi-token search, rol, estado, orden and pagination', () => {
+  assert.equal(result.response.status, 200);
+  assert.ok(result.json.data.some(row => row.usuario === accounts.medico.usuario));
+  assert.equal(result.json.meta.pagina, 1);
+  assert.equal(result.json.meta.por_pagina, 10);
+});
+
+// Inyección SQL y comodines LIKE (%, _, %%%, \) en todos los endpoints de búsqueda.
+const sqliPayloads = ["' OR '1'='1", "'; DROP TABLE pacientes;--", "1' UNION SELECT 1--"];
+const wildcardPayloads = ['%', '_', '%%%', '___', '\\'];
+const searchTargets = [
+  { name: 'get_morbilidad.php', client: doctor, path: q => `get_morbilidad.php?fecha_inicio=${today}&fecha_fin=${today}&q=${encodeURIComponent(q)}`, kind: 'json' },
+  { name: 'get_pacientes.php', client: doctor, path: q => `get_pacientes.php?q=${encodeURIComponent(q)}`, kind: 'json' },
+  { name: 'get_citas.php', client: doctor, path: q => `get_citas.php?q=${encodeURIComponent(q)}`, kind: 'json' },
+  { name: 'get_auditoria.php', client: admin, path: q => `get_auditoria.php?q=${encodeURIComponent(q)}`, kind: 'json' },
+  { name: 'usuarios.php', client: admin, path: q => `usuarios.php?q=${encodeURIComponent(q)}`, kind: 'json' },
+];
+for (const target of searchTargets) {
+  for (const payload of sqliPayloads) {
+    result = await target.client.api(target.path(payload));
+    check(`${target.name} safely handles SQLi payload: ${payload}`, () => {
+      assert.equal(result.response.status, 200);
+      assert.equal(result.json.data.length, 0);
+    });
+  }
+  for (const wc of wildcardPayloads) {
+    result = await target.client.api(target.path(wc));
+    check(`${target.name} escapes LIKE wildcard: ${JSON.stringify(wc)}`, () => {
+      assert.equal(result.response.status, 200);
+      if (target.name === 'get_auditoria.php' && wc === '_') {
+        // Audit actions (e.g. login_ok) legitimately contain literal underscores; ensure every match has a literal '_'.
+        assert.ok(result.json.data.every(row =>
+          `${row.usuario || ''} ${row.nombre_completo || ''} ${row.accion || ''} ${row.entidad || ''} ${row.ip || ''}`.includes('_')
+        ));
+      } else {
+        assert.equal(result.json.data.length, 0);
+      }
+    });
+  }
+}
+for (const payload of ["' OR '1'='1", '%%%']) {
+  const csvCheck = await doctor.raw(`/api/export_morbilidad.php?fecha_inicio=${today}&fecha_fin=${today}&q=${encodeURIComponent(payload)}`);
+  const csvBody = (await csvCheck.text()).trim();
+  check(`export_morbilidad.php safely returns header-only CSV for ${payload}`, () => {
+    assert.equal(csvCheck.status, 200);
+    assert.equal(csvBody.split(/\r?\n/).length, 1);
+  });
+  const printCheck = await doctor.raw(`/api/print_morbilidad.php?fecha_inicio=${today}&fecha_fin=${today}&q=${encodeURIComponent(payload)}`);
+  const printBody = await printCheck.text();
+  check(`print_morbilidad.php safely returns 0 rows for ${payload}`, () => {
+    assert.equal(printCheck.status, 200);
+    assert.ok(printBody.includes('Total de consultas:</span> <span class="fuerte">0</span>'));
+  });
+}
+// Verificar que la tabla pacientes sigue intacta tras los intentos de SQLi.
+result = await doctor.api(`get_pacientes.php?q=${encodeURIComponent(accentPatient.cedula)}`);
+check('pacientes table intact after SQLi attempts', () => assert.equal(result.json.data.length, 1));
+
+// Entradas inválidas: cadenas >100 caracteres, fechas inválidas, rangos invertidos y enums no permitidos -> 422 (nunca 500).
+const overlongQ = 'a'.repeat(101);
+const invalidRequests = [
+  [doctor, `get_morbilidad.php?fecha_inicio=${today}&fecha_fin=${today}&q=${overlongQ}`, 'get_morbilidad overlong q'],
+  [doctor, `get_morbilidad.php?fecha_inicio=2026-02-30&fecha_fin=2026-03-01`, 'get_morbilidad invalid date'],
+  [doctor, `get_morbilidad.php?fecha_inicio=${today}&fecha_fin=${today}&sexo=Invalido`, 'get_morbilidad invalid sexo'],
+  [doctor, `get_morbilidad.php?fecha_inicio=${today}&fecha_fin=${today}&con_reposo=2`, 'get_morbilidad invalid con_reposo'],
+  [doctor, `get_morbilidad.php?fecha_inicio=${today}&fecha_fin=${today}&categoria_id=999999`, 'get_morbilidad nonexistent categoria_id'],
+  [doctor, `get_pacientes.php?q=${overlongQ}`, 'get_pacientes overlong q'],
+  [doctor, `get_pacientes.php?sexo=Invalido`, 'get_pacientes invalid sexo'],
+  [doctor, `get_pacientes.php?orden=DROP`, 'get_pacientes invalid orden'],
+  [doctor, `get_citas.php?q=${overlongQ}`, 'get_citas overlong q'],
+  [doctor, `get_citas.php?estado=Inventado`, 'get_citas invalid estado'],
+  [doctor, `get_citas.php?fecha=2026-02-30`, 'get_citas invalid fecha'],
+  [doctor, `get_citas.php?orden=random`, 'get_citas invalid orden'],
+  [admin, `get_auditoria.php?q=${overlongQ}`, 'get_auditoria overlong q'],
+  [admin, `get_auditoria.php?accion=evil_action`, 'get_auditoria invalid accion'],
+  [admin, `get_auditoria.php?entidad=evil`, 'get_auditoria invalid entidad'],
+  [admin, `get_auditoria.php?desde=2026-12-01&hasta=2026-01-01`, 'get_auditoria reversed range'],
+  [admin, `usuarios.php?q=${overlongQ}`, 'usuarios overlong q'],
+  [admin, `usuarios.php?rol=superadmin`, 'usuarios invalid rol'],
+  [admin, `usuarios.php?estado=eliminado`, 'usuarios invalid estado'],
+  [admin, `usuarios.php?orden=password_hash`, 'usuarios invalid orden'],
+];
+for (const [client, path, label] of invalidRequests) {
+  result = await client.api(path);
+  check(`Invalid filter returns 422: ${label}`, () => assert.equal(result.response.status, 422));
+}
+for (const [path, label] of [
+  [`/api/export_morbilidad.php?fecha_inicio=${today}&fecha_fin=${today}&q=${overlongQ}`, 'export_morbilidad overlong q'],
+  [`/api/export_morbilidad.php?fecha_inicio=${today}&fecha_fin=${today}&sexo=Invalido`, 'export_morbilidad invalid sexo'],
+  [`/api/print_morbilidad.php?fecha_inicio=${today}&fecha_fin=${today}&q=${overlongQ}`, 'print_morbilidad overlong q'],
+  [`/api/print_morbilidad.php?fecha_inicio=2026-12-01&fecha_fin=2026-01-01`, 'print_morbilidad reversed range'],
+]) {
+  const res = await doctor.raw(path);
+  check(`Invalid filter returns 422: ${label}`, () => assert.equal(res.status, 422));
 }
 
 // ---------------------------------------------------------------------------
@@ -421,7 +702,7 @@ for (const path of [`get_paciente_detalle.php?id=${patientId}`, `get_consulta.ph
     assert.equal(result.json.code, 'forbidden');
   });
 }
-for (const path of [`print_informe.php?consulta_id=${consultId}`, `print_historia.php?paciente_id=${patientId}`, `export_morbilidad.php?fecha_inicio=${today}&fecha_fin=${today}`, `download_archivo.php?id=${attachment.ruta_archivo.split('=')[1]}`]) {
+for (const path of [`print_informe.php?consulta_id=${consultId}`, `print_reposo.php?consulta_id=${consultId}`, `print_recipe.php?consulta_id=${consultId}`, `print_historia.php?paciente_id=${patientId}`, `export_morbilidad.php?fecha_inicio=${today}&fecha_fin=${today}`, `download_archivo.php?id=${attachment.ruta_archivo.split('=')[1]}`]) {
   const response = await assistant.raw(`/api/${path}`);
   check(`Assistant forbidden: ${path.split('?')[0]}`, () => assert.equal(response.status, 403));
 }
@@ -481,6 +762,11 @@ result = await doctor.api('session.php');
 check('Session survives a password change', () => assert.equal(result.response.status, 200));
 result = await doctor.api('logout.php', { method: 'POST' });
 check('Logout', () => assert.equal(result.response.status, 200));
+result = await admin.api('get_auditoria.php?accion=logout&q=_');
+check('get_auditoria.php single underscore does not wildcard-match logout rows', () => {
+  assert.equal(result.response.status, 200);
+  assert.equal(result.json.data.length, 0);
+});
 result = await doctor.api('session.php');
 check('Session ends after logout', () => assert.equal(result.response.status, 401));
 
@@ -534,6 +820,23 @@ for (const path of ['/js/', '/vendor/']) {
 }
 const logo = await fetch(new URL('/uploads/logo_unefa_1.png', base));
 check('Institutional logo stays public', () => assert.equal(logo.status, 200));
+const brandLogo = await fetch(new URL('/assets/logo-unefa.png', base));
+check('Public UNEFA transparent brand logo loads (200 image/png)', () => {
+  assert.equal(brandLogo.status, 200);
+  assert.match(brandLogo.headers.get('content-type') || '', /image\/png/);
+});
+const brandFavicon = await fetch(new URL('/assets/favicon-unefa.png', base));
+check('Public UNEFA favicon loads (200 image/png)', () => {
+  assert.equal(brandFavicon.status, 200);
+  assert.match(brandFavicon.headers.get('content-type') || '', /image\/png/);
+});
+const loginPage = await fetch(new URL('/login.php', base));
+const loginHtml = await loginPage.text();
+check('Login page loads publicly with UNEFA brand logo and favicon', () => {
+  assert.equal(loginPage.status, 200);
+  assert.ok(loginHtml.includes('assets/logo-unefa.png'));
+  assert.ok(loginHtml.includes('assets/favicon-unefa.png'));
+});
 const legacyUpload = await fetch(new URL('/uploads/6a2f2e7d54703_0b9c6c89.png', base));
 check('Legacy uploads are not served directly', () => assert.equal(legacyUpload.status, 403));
 // src se monta desde un sistema de archivos que puede no distinguir mayúsculas: cambiar

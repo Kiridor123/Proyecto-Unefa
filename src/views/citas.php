@@ -9,7 +9,7 @@
             <button type="button" class="view-chip" data-citas-vista="todas" aria-pressed="false">Todas</button>
         </div>
         <div class="toolbar citas-toolbar">
-            <div class="field search-field"><label for="filterCitasPaciente">Buscar paciente</label><div class="input-icon"><i class="ph ph-magnifying-glass" aria-hidden="true"></i><input type="search" id="filterCitasPaciente" placeholder="Cédula, nombre o apellido" autocomplete="off" maxlength="100"></div></div>
+            <div class="field search-field"><label for="filterCitasPaciente">Buscar paciente</label><div class="input-icon"><i class="ph ph-magnifying-glass" aria-hidden="true"></i><input type="search" id="filterCitasPaciente" placeholder="Cédula, nombre o apellido" autocomplete="off" maxlength="100" enterkeyhint="search"></div></div>
             <div class="field date-filter-field"><label for="filterCitasFecha">Día específico</label><input type="date" id="filterCitasFecha"></div>
             <div class="field filter-field"><label for="filterCitasEstado">Estado de la cita</label><select id="filterCitasEstado"><option value="">Todos los estados</option><option value="Pendiente">Pendiente</option><option value="Completada">Completada</option><option value="Cancelada">Cancelada</option></select></div>
         </div>

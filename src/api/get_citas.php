@@ -2,52 +2,66 @@
 declare(strict_types=1);
 require_once __DIR__ . '/../config/bootstrap.php';
 require_once __DIR__ . '/../config/Citas.php';
+
 use Config\Validation;
 
 api_method('GET');
 api_require('citas.gestionar');
+
 $errors = [];
-$status = Validation::text($_GET, 'estado', 20, $errors);
-if ($status !== '' && !in_array($status, CITA_ESTADOS, true)) $errors['estado'] = 'Seleccione un estado válido.';
-$dates = [];
-foreach (['fecha', 'desde', 'hasta'] as $key) {
-    $dates[$key] = Validation::text($_GET, $key, 10, $errors);
-    if ($dates[$key] !== '' && !Validation::date($dates[$key])) $errors[$key] = 'Indique una fecha válida (AAAA-MM-DD).';
+$status = Validation::enum($_GET, 'estado', CITA_ESTADOS, $errors, 'Seleccione un estado válido.', 20);
+$fecha = Validation::text($_GET, 'fecha', 10, $errors);
+if ($fecha !== '' && !Validation::date($fecha)) {
+    $errors['fecha'] = 'Indique una fecha válida (AAAA-MM-DD).';
 }
-if ($dates['desde'] !== '' && $dates['hasta'] !== '' && !isset($errors['desde']) && !isset($errors['hasta']) && $dates['hasta'] < $dates['desde']) {
-    $errors['hasta'] = 'La fecha final debe ser igual o posterior a la inicial.';
-}
-$search = Validation::text($_GET, 'q', 100, $errors);
-$order = Validation::text($_GET, 'orden', 4, $errors);
+[$desde, $hasta] = Validation::optionalDateRange($_GET, $errors, 'desde', 'hasta');
+$categoryId = Validation::optionalPositiveId($_GET, 'categoria_id', $errors, 'Seleccione una categoría válida.');
+$search = Validation::search($_GET, 'q', $errors, Validation::SEARCH_MAX_LENGTH);
+$order = Validation::enum($_GET, 'orden', ['asc', 'desc'], $errors, 'Indique un orden válido (asc o desc).', 4);
 if ($order === '') $order = 'asc';
-if (!in_array($order, ['asc', 'desc'], true)) $errors['orden'] = 'Indique un orden válido (asc o desc).';
 [$page, $perPage, $offset] = api_pagination($_GET, 50, 200, $errors);
 api_validate($errors);
 
 $conditions = [];
 $params = [];
-if ($status !== '') { $conditions[] = 'c.estado = ?'; $params[] = $status; }
-if ($dates['fecha'] !== '') {
-    $conditions[] = "c.fecha_cita >= CAST(? AS DATE) AND c.fecha_cita < CAST(? AS DATE) + INTERVAL '1 day'";
-    array_push($params, $dates['fecha'], $dates['fecha']);
+if ($status !== '') {
+    $conditions[] = 'c.estado = ?';
+    $params[] = $status;
 }
-if ($dates['desde'] !== '') { $conditions[] = 'c.fecha_cita >= CAST(? AS DATE)'; $params[] = $dates['desde']; }
-if ($dates['hasta'] !== '') { $conditions[] = "c.fecha_cita < CAST(? AS DATE) + INTERVAL '1 day'"; $params[] = $dates['hasta']; }
+if ($fecha !== '') {
+    $conditions[] = "c.fecha_cita >= CAST(? AS DATE) AND c.fecha_cita < CAST(? AS DATE) + INTERVAL '1 day'";
+    array_push($params, $fecha, $fecha);
+}
+if ($desde !== '') {
+    $conditions[] = 'c.fecha_cita >= CAST(? AS DATE)';
+    $params[] = $desde;
+}
+if ($hasta !== '') {
+    $conditions[] = "c.fecha_cita < CAST(? AS DATE) + INTERVAL '1 day'";
+    $params[] = $hasta;
+}
+if ($categoryId !== null) {
+    $conditions[] = 'p.categoria_id = ?';
+    $params[] = $categoryId;
+}
 if ($search !== '') {
-    $normalize = static fn(string $expression): string => "translate(lower($expression), 'áéíóúüàèìòùñ', 'aeiouuaeioun')";
-    foreach (array_slice(preg_split('/\s+/u', $search, -1, PREG_SPLIT_NO_EMPTY) ?: [], 0, 6) as $word) {
-        $pattern = '%' . addcslashes($word, '%_\\') . '%';
+    $searchable = Validation::sqlNormalize("concat_ws(' ', p.nombres, p.apellidos, c.motivo, cat.nombre)");
+    foreach (Validation::searchTokens($search) as $token) {
+        $pattern = Validation::likePattern($token);
         // La cédula se compara sin guiones, puntos ni espacios: V12345678, V-12345678 y 12.345.678 coinciden.
-        $cedula = strtoupper((string) preg_replace('/[\s.\-]+/u', '', $word));
+        $cedula = Validation::cedulaSearchToken($token);
         if ($cedula === '') {
-            $conditions[] = $normalize("p.nombres || ' ' || p.apellidos") . ' LIKE ' . $normalize('?');
+            $conditions[] = $searchable . ' ' . Validation::SQL_LIKE_CLAUSE;
             $params[] = $pattern;
         } else {
-            $conditions[] = '(' . $normalize("p.nombres || ' ' || p.apellidos") . ' LIKE ' . $normalize('?') . " OR translate(upper(p.cedula), '-. ', '') LIKE ?)";
-            array_push($params, $pattern, '%' . addcslashes($cedula, '%_\\') . '%');
+            $conditions[] = '(' . $searchable . ' ' . Validation::SQL_LIKE_CLAUSE
+                . " OR translate(upper(p.cedula), '-. ', '') " . Validation::SQL_LIKE_CLAUSE . ')';
+            $params[] = $pattern;
+            $params[] = '%' . Validation::escapeLike($cedula) . '%';
         }
     }
 }
+
 $from = ' FROM citas c JOIN pacientes p ON c.paciente_id = p.id JOIN categorias_institucionales cat ON p.categoria_id = cat.id';
 $where = $conditions ? ' WHERE ' . implode(' AND ', $conditions) : '';
 $db = api_db();

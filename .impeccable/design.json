@@ -1,338 +1,177 @@
 {
   "schemaVersion": 2,
-  "generatedAt": "2026-10-20T19:58:53.994Z",
+  "generatedAt": "2026-11-25T12:25:00.000Z",
   "title": "Design System: Salud UNEFA",
   "extensions": {
     "colorMeta": {
       "primary": {
         "role": "primary",
-        "displayName": "primary",
-        "canonical": "#202a30",
+        "displayName": "UNEFA Primary Navy",
+        "canonical": "#0f2a56",
         "tonalRamp": [
-          "oklch(15.0% 0.0178 234.6)",
-          "oklch(26.4% 0.0178 234.6)",
-          "oklch(37.9% 0.0178 234.6)",
-          "oklch(49.3% 0.0178 234.6)",
-          "oklch(60.7% 0.0178 234.6)",
-          "oklch(72.1% 0.0178 234.6)",
-          "oklch(83.6% 0.0178 234.6)",
-          "oklch(95.0% 0.0178 234.6)"
+          "oklch(16.0% 0.068 258.0)",
+          "oklch(24.0% 0.088 258.0)",
+          "oklch(30.5% 0.102 258.0)",
+          "oklch(40.0% 0.118 258.0)",
+          "oklch(52.0% 0.115 258.0)",
+          "oklch(67.0% 0.085 258.0)",
+          "oklch(83.0% 0.045 258.0)",
+          "oklch(95.0% 0.015 258.0)"
         ]
       },
-      "neutral-bg": {
-        "role": "neutral",
-        "displayName": "neutral-bg",
-        "canonical": "#f6f8f8",
+      "unefa-navy": {
+        "role": "primary",
+        "displayName": "UNEFA Deep Navy Shell",
+        "canonical": "#0c234b",
         "tonalRamp": [
-          "oklch(15.0% 0.0021 197.1)",
-          "oklch(26.4% 0.0021 197.1)",
-          "oklch(37.9% 0.0021 197.1)",
-          "oklch(49.3% 0.0021 197.1)",
-          "oklch(60.7% 0.0021 197.1)",
-          "oklch(72.1% 0.0021 197.1)",
-          "oklch(83.6% 0.0021 197.1)",
-          "oklch(95.0% 0.0021 197.1)"
-        ]
-      },
-      "surface": {
-        "role": "neutral",
-        "displayName": "surface",
-        "canonical": "#ffffff",
-        "tonalRamp": [
-          "oklch(15.0% 0.0000 0.0)",
-          "oklch(26.4% 0.0000 0.0)",
-          "oklch(37.9% 0.0000 0.0)",
-          "oklch(49.3% 0.0000 0.0)",
-          "oklch(60.7% 0.0000 0.0)",
-          "oklch(72.1% 0.0000 0.0)",
-          "oklch(83.6% 0.0000 0.0)",
-          "oklch(95.0% 0.0000 0.0)"
-        ]
-      },
-      "raised": {
-        "role": "neutral",
-        "displayName": "raised",
-        "canonical": "#f1f4f4",
-        "tonalRamp": [
-          "oklch(15.0% 0.0032 197.1)",
-          "oklch(26.4% 0.0032 197.1)",
-          "oklch(37.9% 0.0032 197.1)",
-          "oklch(49.3% 0.0032 197.1)",
-          "oklch(60.7% 0.0032 197.1)",
-          "oklch(72.1% 0.0032 197.1)",
-          "oklch(83.6% 0.0032 197.1)",
-          "oklch(95.0% 0.0032 197.1)"
-        ]
-      },
-      "active": {
-        "role": "neutral",
-        "displayName": "active",
-        "canonical": "#e7eded",
-        "tonalRamp": [
-          "oklch(15.0% 0.0064 197.0)",
-          "oklch(26.4% 0.0064 197.0)",
-          "oklch(37.9% 0.0064 197.0)",
-          "oklch(49.3% 0.0064 197.0)",
-          "oklch(60.7% 0.0064 197.0)",
-          "oklch(72.1% 0.0064 197.0)",
-          "oklch(83.6% 0.0064 197.0)",
-          "oklch(95.0% 0.0064 197.0)"
-        ]
-      },
-      "border": {
-        "role": "neutral",
-        "displayName": "border",
-        "canonical": "#e0e6e6",
-        "tonalRamp": [
-          "oklch(15.0% 0.0065 197.0)",
-          "oklch(26.4% 0.0065 197.0)",
-          "oklch(37.9% 0.0065 197.0)",
-          "oklch(49.3% 0.0065 197.0)",
-          "oklch(60.7% 0.0065 197.0)",
-          "oklch(72.1% 0.0065 197.0)",
-          "oklch(83.6% 0.0065 197.0)",
-          "oklch(95.0% 0.0065 197.0)"
-        ]
-      },
-      "control": {
-        "role": "neutral",
-        "displayName": "control",
-        "canonical": "#c4cece",
-        "tonalRamp": [
-          "oklch(15.0% 0.0109 196.9)",
-          "oklch(26.4% 0.0109 196.9)",
-          "oklch(37.9% 0.0109 196.9)",
-          "oklch(49.3% 0.0109 196.9)",
-          "oklch(60.7% 0.0109 196.9)",
-          "oklch(72.1% 0.0109 196.9)",
-          "oklch(83.6% 0.0109 196.9)",
-          "oklch(95.0% 0.0109 196.9)"
-        ]
-      },
-      "ink": {
-        "role": "neutral",
-        "displayName": "ink",
-        "canonical": "#202a30",
-        "tonalRamp": [
-          "oklch(15.0% 0.0178 234.6)",
-          "oklch(26.4% 0.0178 234.6)",
-          "oklch(37.9% 0.0178 234.6)",
-          "oklch(49.3% 0.0178 234.6)",
-          "oklch(60.7% 0.0178 234.6)",
-          "oklch(72.1% 0.0178 234.6)",
-          "oklch(83.6% 0.0178 234.6)",
-          "oklch(95.0% 0.0178 234.6)"
-        ]
-      },
-      "muted": {
-        "role": "neutral",
-        "displayName": "muted",
-        "canonical": "#5c696e",
-        "tonalRamp": [
-          "oklch(15.0% 0.0177 222.9)",
-          "oklch(26.4% 0.0177 222.9)",
-          "oklch(37.9% 0.0177 222.9)",
-          "oklch(49.3% 0.0177 222.9)",
-          "oklch(60.7% 0.0177 222.9)",
-          "oklch(72.1% 0.0177 222.9)",
-          "oklch(83.6% 0.0177 222.9)",
-          "oklch(95.0% 0.0177 222.9)"
+          "oklch(15.0% 0.064 259.0)",
+          "oklch(25.0% 0.086 259.0)",
+          "oklch(35.0% 0.098 259.0)",
+          "oklch(48.0% 0.092 259.0)",
+          "oklch(62.0% 0.072 259.0)",
+          "oklch(75.0% 0.052 259.0)",
+          "oklch(86.0% 0.032 259.0)",
+          "oklch(95.0% 0.012 259.0)"
         ]
       },
       "accent": {
         "role": "primary",
-        "displayName": "accent",
-        "canonical": "#256e78",
+        "displayName": "UNEFA Royal Blue",
+        "canonical": "#1a4b8c",
         "tonalRamp": [
-          "oklch(15.0% 0.0719 208.0)",
-          "oklch(26.4% 0.0719 208.0)",
-          "oklch(37.9% 0.0719 208.0)",
-          "oklch(49.3% 0.0719 208.0)",
-          "oklch(60.7% 0.0719 208.0)",
-          "oklch(72.1% 0.0719 208.0)",
-          "oklch(83.6% 0.0719 208.0)",
-          "oklch(95.0% 0.0719 208.0)"
+          "oklch(20.0% 0.085 256.0)",
+          "oklch(32.0% 0.115 256.0)",
+          "oklch(41.5% 0.128 256.0)",
+          "oklch(53.0% 0.122 256.0)",
+          "oklch(65.0% 0.098 256.0)",
+          "oklch(78.0% 0.065 256.0)",
+          "oklch(88.0% 0.035 256.0)",
+          "oklch(96.0% 0.014 256.0)"
         ]
+      },
+      "unefa-gold": {
+        "role": "accent",
+        "displayName": "UNEFA Institutional Gold",
+        "canonical": "#d49b1a",
+        "tonalRamp": [
+          "oklch(28.0% 0.065 82.0)",
+          "oklch(42.0% 0.095 82.0)",
+          "oklch(55.0% 0.120 82.0)",
+          "oklch(72.0% 0.142 82.0)",
+          "oklch(82.0% 0.135 84.0)",
+          "oklch(90.0% 0.082 86.0)",
+          "oklch(96.0% 0.035 88.0)"
+        ]
+      },
+      "neutral-bg": {
+        "role": "neutral",
+        "displayName": "Porcelain Canvas",
+        "canonical": "#f4f6fa"
+      },
+      "surface": {
+        "role": "neutral",
+        "displayName": "Clinical Surface",
+        "canonical": "#ffffff"
+      },
+      "raised": {
+        "role": "neutral",
+        "displayName": "Raised Neutral",
+        "canonical": "#edf1f7"
+      },
+      "active": {
+        "role": "neutral",
+        "displayName": "Active Neutral",
+        "canonical": "#e1e8f4"
+      },
+      "border": {
+        "role": "neutral",
+        "displayName": "Border",
+        "canonical": "#dce3ee"
+      },
+      "control": {
+        "role": "neutral",
+        "displayName": "Control Border",
+        "canonical": "#bcc7d9"
+      },
+      "ink": {
+        "role": "neutral",
+        "displayName": "UNEFA Deep Ink",
+        "canonical": "#101d33"
+      },
+      "muted": {
+        "role": "neutral",
+        "displayName": "Slate Muted Ink",
+        "canonical": "#4e5e76"
       },
       "negative": {
         "role": "status",
-        "displayName": "negative",
-        "canonical": "#a6353a",
-        "tonalRamp": [
-          "oklch(15.0% 0.1482 21.9)",
-          "oklch(26.4% 0.1482 21.9)",
-          "oklch(37.9% 0.1482 21.9)",
-          "oklch(49.3% 0.1482 21.9)",
-          "oklch(60.7% 0.1482 21.9)",
-          "oklch(72.1% 0.1482 21.9)",
-          "oklch(83.6% 0.1482 21.9)",
-          "oklch(95.0% 0.1482 21.9)"
-        ]
+        "displayName": "UNEFA Heraldic Crimson",
+        "canonical": "#a1242b"
       },
       "positive": {
         "role": "status",
-        "displayName": "positive",
-        "canonical": "#236b50",
-        "tonalRamp": [
-          "oklch(15.0% 0.0840 164.6)",
-          "oklch(26.4% 0.0840 164.6)",
-          "oklch(37.9% 0.0840 164.6)",
-          "oklch(49.3% 0.0840 164.6)",
-          "oklch(60.7% 0.0840 164.6)",
-          "oklch(72.1% 0.0840 164.6)",
-          "oklch(83.6% 0.0840 164.6)",
-          "oklch(95.0% 0.0840 164.6)"
-        ]
-      },
-      "cancelled-ink": {
-        "role": "state",
-        "canonical": "#5c686d",
-        "displayName": "cancelled-ink",
-        "tonalRamp": [
-          "oklch(15.0% 0.0167 224.7)",
-          "oklch(26.4% 0.0167 224.7)",
-          "oklch(37.9% 0.0167 224.7)",
-          "oklch(49.3% 0.0167 224.7)",
-          "oklch(60.7% 0.0167 224.7)",
-          "oklch(72.1% 0.0167 224.7)",
-          "oklch(83.6% 0.0167 224.7)",
-          "oklch(95.0% 0.0167 224.7)"
-        ]
-      },
-      "control-hover": {
-        "role": "state",
-        "canonical": "#9baaaa",
-        "displayName": "control-hover",
-        "tonalRamp": [
-          "oklch(15.0% 0.0169 196.8)",
-          "oklch(26.4% 0.0169 196.8)",
-          "oklch(37.9% 0.0169 196.8)",
-          "oklch(49.3% 0.0169 196.8)",
-          "oklch(60.7% 0.0169 196.8)",
-          "oklch(72.1% 0.0169 196.8)",
-          "oklch(83.6% 0.0169 196.8)",
-          "oklch(95.0% 0.0169 196.8)"
-        ]
-      },
-      "pending-ink": {
-        "role": "state",
-        "canonical": "#7b5819",
-        "displayName": "pending-ink",
-        "tonalRamp": [
-          "oklch(15.0% 0.0896 77.8)",
-          "oklch(26.4% 0.0896 77.8)",
-          "oklch(37.9% 0.0896 77.8)",
-          "oklch(49.3% 0.0896 77.8)",
-          "oklch(60.7% 0.0896 77.8)",
-          "oklch(72.1% 0.0896 77.8)",
-          "oklch(83.6% 0.0896 77.8)",
-          "oklch(95.0% 0.0896 77.8)"
-        ]
-      },
-      "cancelled-bg": {
-        "role": "state",
-        "canonical": "#f1f3f3",
-        "displayName": "cancelled-bg",
-        "tonalRamp": [
-          "oklch(15.0% 0.0021 197.1)",
-          "oklch(26.4% 0.0021 197.1)",
-          "oklch(37.9% 0.0021 197.1)",
-          "oklch(49.3% 0.0021 197.1)",
-          "oklch(60.7% 0.0021 197.1)",
-          "oklch(72.1% 0.0021 197.1)",
-          "oklch(83.6% 0.0021 197.1)",
-          "oklch(95.0% 0.0021 197.1)"
-        ]
-      },
-      "completed-ink": {
-        "role": "state",
-        "canonical": "#236346",
-        "displayName": "completed-ink",
-        "tonalRamp": [
-          "oklch(15.0% 0.0813 160.7)",
-          "oklch(26.4% 0.0813 160.7)",
-          "oklch(37.9% 0.0813 160.7)",
-          "oklch(49.3% 0.0813 160.7)",
-          "oklch(60.7% 0.0813 160.7)",
-          "oklch(72.1% 0.0813 160.7)",
-          "oklch(83.6% 0.0813 160.7)",
-          "oklch(95.0% 0.0813 160.7)"
-        ]
-      },
-      "completed-bg": {
-        "role": "state",
-        "canonical": "#e9f4ee",
-        "displayName": "completed-bg",
-        "tonalRamp": [
-          "oklch(15.0% 0.0141 162.5)",
-          "oklch(26.4% 0.0141 162.5)",
-          "oklch(37.9% 0.0141 162.5)",
-          "oklch(49.3% 0.0141 162.5)",
-          "oklch(60.7% 0.0141 162.5)",
-          "oklch(72.1% 0.0141 162.5)",
-          "oklch(83.6% 0.0141 162.5)",
-          "oklch(95.0% 0.0141 162.5)"
-        ]
+        "displayName": "Clinical Emerald",
+        "canonical": "#1d694d"
       },
       "pending-bg": {
         "role": "state",
-        "canonical": "#fff5de",
-        "displayName": "pending-bg",
-        "tonalRamp": [
-          "oklch(15.0% 0.0320 87.3)",
-          "oklch(26.4% 0.0320 87.3)",
-          "oklch(37.9% 0.0320 87.3)",
-          "oklch(49.3% 0.0320 87.3)",
-          "oklch(60.7% 0.0320 87.3)",
-          "oklch(72.1% 0.0320 87.3)",
-          "oklch(83.6% 0.0320 87.3)",
-          "oklch(95.0% 0.0320 87.3)"
-        ]
+        "displayName": "Pending Gold Soft",
+        "canonical": "#fdf4dc"
       },
-      "selection-ink": {
+      "pending-ink": {
         "role": "state",
-        "canonical": "#123f45",
-        "displayName": "selection-ink",
-        "tonalRamp": [
-          "oklch(15.0% 0.0488 207.6)",
-          "oklch(26.4% 0.0488 207.6)",
-          "oklch(37.9% 0.0488 207.6)",
-          "oklch(49.3% 0.0488 207.6)",
-          "oklch(60.7% 0.0488 207.6)",
-          "oklch(72.1% 0.0488 207.6)",
-          "oklch(83.6% 0.0488 207.6)",
-          "oklch(95.0% 0.0488 207.6)"
-        ]
+        "displayName": "Pending Ochre Ink",
+        "canonical": "#734d06"
       },
-      "selection-bg": {
+      "completed-bg": {
         "role": "state",
-        "canonical": "#dceced",
-        "displayName": "selection-bg",
-        "tonalRamp": [
-          "oklch(15.0% 0.0170 201.4)",
-          "oklch(26.4% 0.0170 201.4)",
-          "oklch(37.9% 0.0170 201.4)",
-          "oklch(49.3% 0.0170 201.4)",
-          "oklch(60.7% 0.0170 201.4)",
-          "oklch(72.1% 0.0170 201.4)",
-          "oklch(83.6% 0.0170 201.4)",
-          "oklch(95.0% 0.0170 201.4)"
-        ]
+        "displayName": "Completed Soft",
+        "canonical": "#e7f4ee"
+      },
+      "completed-ink": {
+        "role": "state",
+        "displayName": "Completed Ink",
+        "canonical": "#195b42"
+      },
+      "cancelled-bg": {
+        "role": "state",
+        "displayName": "Cancelled Soft",
+        "canonical": "#edf1f7"
+      },
+      "cancelled-ink": {
+        "role": "state",
+        "displayName": "Cancelled Ink",
+        "canonical": "#4e5e76"
+      },
+      "overdue-bg": {
+        "role": "state",
+        "displayName": "Overdue Crimson Soft",
+        "canonical": "#fcebed"
+      },
+      "overdue-ink": {
+        "role": "state",
+        "displayName": "Overdue Crimson Ink",
+        "canonical": "#8b1d23"
       },
       "primary-hover": {
         "role": "state",
-        "canonical": "#37454b",
-        "displayName": "primary-hover",
-        "tonalRamp": [
-          "oklch(15.0% 0.0207 225.8)",
-          "oklch(26.4% 0.0207 225.8)",
-          "oklch(37.9% 0.0207 225.8)",
-          "oklch(49.3% 0.0207 225.8)",
-          "oklch(60.7% 0.0207 225.8)",
-          "oklch(72.1% 0.0207 225.8)",
-          "oklch(83.6% 0.0207 225.8)",
-          "oklch(95.0% 0.0207 225.8)"
-        ]
+        "displayName": "Primary Hover",
+        "canonical": "#183d7a"
+      },
+      "control-hover": {
+        "role": "state",
+        "displayName": "Control Hover",
+        "canonical": "#8c9db8"
+      },
+      "selection-bg": {
+        "role": "state",
+        "displayName": "Selection Background",
+        "canonical": "#dce8fa"
+      },
+      "selection-ink": {
+        "role": "state",
+        "displayName": "Selection Ink",
+        "canonical": "#0c234b"
       }
     },
     "typographyMeta": {
@@ -346,7 +185,7 @@
       },
       "metric": {
         "displayName": "Indicador",
-        "purpose": "Cifras reales del servicio."
+        "purpose": "Cifras reales del servicio en azul marino UNEFA."
       },
       "body": {
         "displayName": "Lectura",
@@ -360,12 +199,12 @@
     "shadows": [
       {
         "name": "dialog",
-        "value": "0 18px 60px rgba(24,37,40,.16)",
+        "value": "0 18px 60px rgba(12, 35, 75, .18)",
         "purpose": "Diálogos e historia clínica."
       },
       {
         "name": "notification",
-        "value": "0 8px 24px rgba(24,37,40,.14)",
+        "value": "0 8px 24px rgba(12, 35, 75, .22)",
         "purpose": "Notificación temporal."
       }
     ],
@@ -382,28 +221,19 @@
       }
     ],
     "breakpoints": [
-      {
-        "name": "phone",
-        "value": "767px"
-      },
-      {
-        "name": "fold-sidebar",
-        "value": "1023px"
-      },
-      {
-        "name": "compact-desktop",
-        "value": "1199px"
-      }
+      { "name": "phone", "value": "767px" },
+      { "name": "fold-sidebar", "value": "1023px" },
+      { "name": "compact-desktop", "value": "1199px" }
     ]
   },
   "components": [
     {
-      "name": "Botón principal",
+      "name": "Botón principal UNEFA",
       "kind": "button",
       "refersTo": "button-primary",
-      "description": "Acción principal de la pantalla o formulario.",
+      "description": "Acción principal en azul marino institucional UNEFA.",
       "html": "<button class=\"ds-primary\">Registrar consulta</button>",
-      "css": ".ds-primary{font:500 13px Geist,system-ui,sans-serif;padding:8px 13px;min-height:38px;line-height:1.4;border:1px solid transparent;border-radius:6px;background:var(--primary,#202a30);color:#fff;cursor:pointer}.ds-primary:hover{background:#37454b}.ds-primary:focus-visible{outline:2px solid var(--accent,#256e78);outline-offset:3px}"
+      "css": ".ds-primary{font:500 13px Geist,system-ui,sans-serif;padding:8px 13px;min-height:38px;line-height:1.4;border:1px solid transparent;border-radius:6px;background:var(--primary,#0f2a56);color:#fff;cursor:pointer}.ds-primary:hover{background:#183d7a}.ds-primary:focus-visible{outline:2px solid var(--accent,#1a4b8c);outline-offset:3px}"
     },
     {
       "name": "Botón secundario",
@@ -411,59 +241,37 @@
       "refersTo": "button-secondary",
       "description": "Acción complementaria con etiqueta explícita.",
       "html": "<button class=\"ds-secondary\">Agendar cita</button>",
-      "css": ".ds-secondary{font:500 13px Geist,system-ui,sans-serif;padding:8px 13px;min-height:38px;line-height:1.4;border:1px solid var(--control,#c4cece);border-radius:6px;background:#fff;color:var(--text,#202a30);cursor:pointer}.ds-secondary:hover{background:#f1f4f4;border-color:#9baaaa}.ds-secondary:focus-visible{outline:2px solid var(--accent,#256e78);outline-offset:3px}"
+      "css": ".ds-secondary{font:500 13px Geist,system-ui,sans-serif;padding:8px 13px;min-height:38px;line-height:1.4;border:1px solid var(--control,#bcc7d9);border-radius:6px;background:#fff;color:var(--text,#101d33);cursor:pointer}.ds-secondary:hover{background:#edf1f7;border-color:#8c9db8}.ds-secondary:focus-visible{outline:2px solid var(--accent,#1a4b8c);outline-offset:3px}"
     },
     {
-      "name": "Campo de búsqueda",
-      "kind": "input",
-      "description": "Campo con etiqueta vinculada y foco visible.",
-      "html": "<label class=\"ds-label\" for=\"ds-search\">Buscar paciente</label><input class=\"ds-input\" id=\"ds-search\" placeholder=\"Cédula o nombre del paciente\">",
-      "css": ".ds-label{display:block;margin-bottom:7px;font:500 12px Geist,system-ui,sans-serif;color:var(--muted,#5c696e)}.ds-input{font:400 13px Geist,system-ui,sans-serif;padding:8px 11px;min-height:40px;line-height:1.5;border:1px solid var(--control,#c4cece);border-radius:6px;background:#fff;color:var(--text,#202a30);caret-color:var(--accent,#256e78)}.ds-input::placeholder{color:#657277}.ds-input:focus-visible{outline:2px solid var(--accent,#256e78);outline-offset:3px;border-color:var(--accent,#256e78)}"
-    },
-    {
-      "name": "Destino de navegación",
+      "name": "Navegación institucional UNEFA",
       "kind": "nav",
-      "description": "Selección neutral con nombres de las áreas clínicas.",
+      "description": "Enlace sobre barra lateral azul marino UNEFA con acento dorado en estado activo.",
       "html": "<a class=\"ds-nav\" href=\"#pacientes\" aria-current=\"page\">Pacientes</a>",
-      "css": ".ds-nav{display:flex;align-items:center;min-height:42px;padding:10px 12px;border-radius:6px;background:transparent;color:var(--muted,#5c696e);font:400 14px Geist,system-ui,sans-serif;line-height:1.5;text-decoration:none}.ds-nav:hover{background:var(--raised,#f1f4f4);color:var(--text,#202a30)}.ds-nav[aria-current=\"page\"]{background:var(--active,#e7eded);color:var(--text,#202a30);font-weight:500}.ds-nav:focus-visible{outline:2px solid var(--accent,#256e78);outline-offset:3px}"
+      "css": ".ds-nav{display:flex;align-items:center;min-height:42px;padding:10px 12px;border-radius:6px;background:transparent;color:#d8e3f4;font:400 14px Geist,system-ui,sans-serif;line-height:1.5;text-decoration:none}.ds-nav:hover{background:rgba(255,255,255,.09);color:#fff}.ds-nav[aria-current=\"page\"]{background:#173568;color:#fff;font-weight:500;box-shadow:inset 0 0 0 1px rgba(240,190,73,.32)}.ds-nav:focus-visible{outline:2px solid #f0be49;outline-offset:2px}"
     },
     {
-      "name": "Estado de cita",
+      "name": "Estado pendiente",
       "kind": "chip",
-      "description": "El color acompaña el nombre del estado.",
+      "description": "El dorado institucional suave acompaña el nombre del estado.",
       "html": "<span class=\"ds-status\">Pendiente</span>",
-      "css": ".ds-status{display:inline-flex;align-items:center;padding:3px 7px;border-radius:4px;background:#fff5de;color:#7b5819;font:500 11px Geist,system-ui,sans-serif;line-height:1.5}"
-    },
-    {
-      "name": "Panel de datos",
-      "kind": "card",
-      "refersTo": "panel",
-      "description": "Superficie plana con jerarquía textual.",
-      "html": "<section class=\"ds-panel\"><h3>Consultas por mes</h3><p>Historial de atenciones registradas</p></section>",
-      "css": ".ds-panel{padding:20px 22px;border:1px solid var(--border,#e0e6e6);border-radius:8px;background:#fff;font-family:Geist,system-ui,sans-serif;line-height:1.5;color:var(--text,#202a30)}.ds-panel h3{margin:0;font-size:15px;font-weight:500}.ds-panel p{margin:3px 0 0;font-size:12px;color:var(--muted,#5c696e);line-height:1.65}"
-    },
-    {
-      "name": "Indicador compartido",
-      "kind": "custom",
-      "description": "Una métrica sin iconos ni fondos de color.",
-      "html": "<div class=\"ds-metric\"><p>Consultas del mes</p><strong>0</strong><span>Atenciones registradas</span></div>",
-      "css": ".ds-metric{padding:0 24px;font-family:Geist,system-ui,sans-serif;color:var(--text,#202a30)}.ds-metric p{margin:0;font-size:12px;color:var(--muted,#5c696e)}.ds-metric strong{display:block;font-size:30px;line-height:1.5;font-weight:400;font-variant-numeric:tabular-nums;letter-spacing:-.035em}.ds-metric span{font-size:12px;color:var(--muted,#5c696e)}"
+      "css": ".ds-status{display:inline-flex;align-items:center;padding:3px 7px;border-radius:4px;background:#fdf4dc;color:#734d06;font:500 11px Geist,system-ui,sans-serif;line-height:1.5}"
     }
   ],
   "narrative": {
-    "northStar": "Índice académico clínico",
-    "overview": "La interfaz prioriza la lectura prolongada de información médica y el acceso reconocible a pacientes, consultas, citas y reportes. Conserva el nombre y los términos institucionales; cada pantalla usa controles web familiares y un título que nombra su tarea.\n\nLa identidad se expresa en una superficie fría clara, una tipografía precisa y una sola tinta clínica sobre los datos gráficos. La navegación recede mientras los nombres, las cifras y las acciones mantienen jerarquía.",
+    "northStar": "Índice institucional clínico · UNEFA",
+    "overview": "La interfaz prioriza la lectura prolongada de información médica y el acceso reconocible a pacientes, consultas, citas, reportes de morbilidad y administración, anclada en la identidad institucional oficial de la UNEFA.",
     "keyCharacteristics": [
-      "Navegación etiquetada y consistente entre las cuatro áreas.",
-      "Superficies planas con divisiones suaves.",
-      "Cifras tabulares y estados descritos con palabras.",
-      "Acciones principales oscuras y gráficos en teal.",
-      "Geist alojada en el proyecto."
+      "Barra lateral azul marino UNEFA (#0c234b) con escudo oficial transparente y remate superior dorado (#d49b1a).",
+      "Lienzo clínico claro (#f4f6fa) con paneles blancos (#ffffff) y tinta azul profundo (#101d33).",
+      "Cifras tabulares en azul marino institucional y gráficas en azul real UNEFA (#1a4b8c).",
+      "Contraste WCAG AA/AAA verificado en todos los estados sobre fondos claros y azul marino.",
+      "Geist alojada localmente en el proyecto."
     ],
     "rules": [
       {
         "name": "The Data Color Rule",
-        "body": "El color de una gráfica identifica los datos; no se repite como fondo de indicadores ni de navegación.",
+        "body": "El azul real de las gráficas identifica los datos; no se compite con paletas multicolores ni fondos decorativos detrás de indicadores.",
         "section": "colors"
       },
       {
@@ -473,16 +281,16 @@
       }
     ],
     "dos": [
-      "Do conservar la identidad por cédula, nombre y categoría en escritorio y móvil.",
-      "Do presentar las cifras reales desde las APIs y describir los datos ausentes.",
-      "Do usar el mismo foco visible en campos, enlaces y botones.",
-      "Do reservar la elevación a las superficies que flotan sobre el trabajo."
+      "Do usar el escudo oficial transparente (src/assets/logo-unefa.png) con proporción correcta y alt descriptivo.",
+      "Do conservar contraste AA/AAA usando texto azul claro tintado (#b8c9e4) sobre azul marino.",
+      "Do mantener estados descritos con texto y color simultáneamente.",
+      "Do reservar el dorado institucional a detalles estructurales, foco en marino y alertas pendientes."
     ],
     "donts": [
-      "Don't convertir los indicadores en tarjetas con iconos de colores.",
-      "Don't utilizar información clínica o personas inventadas como decoración.",
-      "Don't ocultar categorías, unidades o diagnósticos al adaptar una lista al móvil.",
-      "Don't usar gradientes, vidrio, tipografía diminuta o animaciones de entrada en el trabajo diario."
+      "Don't colocar logos con recuadro blanco opaco sobre superficies de color.",
+      "Don't usar texto amarillo o dorado claro sobre fondos blancos.",
+      "Don't convertir los indicadores en tarjetas con iconos de colores o gradientes decorativos.",
+      "Don't utilizar datos clínicos ficticios como relleno."
     ]
   }
 }

@@ -165,11 +165,32 @@ function chartEmptyState(canvas, id, message, visible) {
     empty.textContent = message;
     setVisible(empty, visible);
 }
+function chartPalette() {
+    const styles = getComputedStyle(document.documentElement);
+    const token = (name, fallback) => styles.getPropertyValue(name).trim() || fallback;
+    return {
+        series: token('--accent', '#1a4b8c'),
+        seriesHover: token('--primary', '#0f2a56'),
+        tooltipBg: token('--unefa-navy', '#0c234b'),
+        grid: token('--rule', '#eaeff6'),
+        ticks: token('--muted', '#4e5e76'),
+        labels: token('--text', '#101d33')
+    };
+}
 function renderCharts(stats) {
     const categories = Array.isArray(stats.categorias) ? stats.categorias : [];
     const history = Array.isArray(stats.historial_mensual) ? stats.historial_mensual : [];
     const family = getComputedStyle(document.body).fontFamily;
+    const palette = chartPalette();
     const chartAvailable = typeof Chart !== 'undefined';
+    const tooltipOptions = {
+        displayColors: false,
+        backgroundColor: palette.tooltipBg,
+        titleColor: '#ffffff',
+        bodyColor: '#e8effa',
+        padding: 10,
+        cornerRadius: 6
+    };
     const categoryCanvas = document.getElementById('categoryChart');
     if (categoryCanvas) {
         categoryChartInstance?.destroy();
@@ -182,13 +203,13 @@ function renderCharts(stats) {
         categoryCanvas.style.visibility = !total || !chartAvailable ? 'hidden' : 'visible';
         if (chartAvailable && total) categoryChartInstance = new Chart(categoryCanvas.getContext('2d'), {
             type: 'bar',
-            data: { labels: categories.map(category => category.nombre), datasets: [{ label: 'Pacientes', data: categories.map(category => Number(category.cantidad || 0)), backgroundColor: '#256e78', borderRadius: 3, maxBarThickness: 22 }] },
+            data: { labels: categories.map(category => category.nombre), datasets: [{ label: 'Pacientes', data: categories.map(category => Number(category.cantidad || 0)), backgroundColor: palette.series, hoverBackgroundColor: palette.seriesHover, borderRadius: 3, maxBarThickness: 22 }] },
             options: {
                 indexAxis: 'y', responsive: true, maintainAspectRatio: false, animation: false,
-                plugins: { legend: { display: false }, tooltip: { displayColors: false } },
+                plugins: { legend: { display: false }, tooltip: tooltipOptions },
                 scales: {
-                    x: { beginAtZero: true, suggestedMax: total <= 1 ? 1 : undefined, border: { display: false }, grid: { color: '#edf0f0' }, ticks: { precision: 0, maxTicksLimit: 5, color: '#657078', font: { family, size: 12 } } },
-                    y: { border: { display: false }, grid: { display: false }, ticks: { color: '#38464d', font: { family, size: 12 } } }
+                    x: { beginAtZero: true, suggestedMax: total <= 1 ? 1 : undefined, border: { display: false }, grid: { color: palette.grid }, ticks: { precision: 0, maxTicksLimit: 5, color: palette.ticks, font: { family, size: 12 } } },
+                    y: { border: { display: false }, grid: { display: false }, ticks: { color: palette.labels, font: { family, size: 12 } } }
                 }
             }
         });
@@ -206,13 +227,13 @@ function renderCharts(stats) {
         historyCanvas.style.visibility = chartAvailable ? 'visible' : 'hidden';
         if (chartAvailable) historyChartInstance = new Chart(historyCanvas.getContext('2d'), {
             type: 'bar',
-            data: { labels: history.map(month => month.mes_nombre), datasets: [{ label: 'Consultas', data: values, backgroundColor: '#256e78', borderRadius: 3, maxBarThickness: 28 }] },
+            data: { labels: history.map(month => month.mes_nombre), datasets: [{ label: 'Consultas', data: values, backgroundColor: palette.series, hoverBackgroundColor: palette.seriesHover, borderRadius: 3, maxBarThickness: 28 }] },
             options: {
                 responsive: true, maintainAspectRatio: false, animation: false,
-                plugins: { legend: { display: false }, tooltip: { displayColors: false } },
+                plugins: { legend: { display: false }, tooltip: tooltipOptions },
                 scales: {
-                    y: { beginAtZero: true, suggestedMax: total === 0 ? 1 : undefined, border: { display: false }, grid: { color: '#edf0f0' }, ticks: { precision: 0, maxTicksLimit: 5, color: '#657078', font: { family, size: 12 } } },
-                    x: { border: { display: false }, grid: { display: false }, ticks: { color: '#657078', font: { family, size: 12 } } }
+                    y: { beginAtZero: true, suggestedMax: total === 0 ? 1 : undefined, border: { display: false }, grid: { color: palette.grid }, ticks: { precision: 0, maxTicksLimit: 5, color: palette.ticks, font: { family, size: 12 } } },
+                    x: { border: { display: false }, grid: { display: false }, ticks: { color: palette.ticks, font: { family, size: 12 } } }
                 }
             }
         });
